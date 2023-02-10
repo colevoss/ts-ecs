@@ -1,10 +1,27 @@
 import * as T from "three";
-import { Ecs, system, Component } from "./ecs";
+import { Ecs, system, Component, createInputMap, KeyCodes } from "./ecs";
 import { Scene } from "./scene";
 
-document.addEventListener("keydown", (event) => {
-  console.log(event);
+createInputMap({
+  forward: {
+    code: KeyCodes.W,
+    shift: true,
+  },
+  /* otherForward: { */
+  /*   code: KeyCodes.W, */
+  /* }, */
+  right: {
+    code: KeyCodes.D,
+    shift: false,
+  },
 });
+
+/* document.addEventListener("keydown", (event) => { */
+/*   console.log(event); */
+/* }); */
+/* document.addEventListener("keyup", (event) => { */
+/*   console.log(event); */
+/* }); */
 
 const rand = (max: number) => {
   return Math.floor(Math.random() * max) - max / 2;
