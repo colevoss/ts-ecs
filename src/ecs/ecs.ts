@@ -12,25 +12,36 @@ import {
 import { ResourceContainer } from "./resource";
 
 export class Timer {
-  /* start: number; */
+  start: number;
   last: number;
+  deltaTime: number;
+  public betterDur: number;
 
   constructor() {
     this.last = Date.now();
-    /* this.start = performance.now(); */
+    this.start = this.last;
+    this.deltaTime = 0;
+    this.betterDur = 0;
   }
 
   public reset() {
-    /* this.start = performance.now(); */
+    this.start = Date.now();
   }
 
-  public get deltaTime(): number {
-    return Date.now() - this.last;
-    /* return performance.now() - this.start; */
+  public duration() {
+    return (Date.now() - this.start) / 1000;
   }
 
-  public tick() {
-    this.last = Date.now();
+  // public get deltaTime(): number {
+  //   return (Date.now() - this.last) / 1000;
+  // }
+
+  public tick(_t?: number) {
+    // this.last = t || Date.now();
+    const now = Date.now();
+    this.deltaTime = (now - this.last) / 1000;
+    this.last = now;
+    this.betterDur = (this.last - this.start) / 1000;
   }
 }
 
@@ -132,9 +143,9 @@ export class Ecs {
     this.resources.set(t);
   }
 
-  public run(cb: () => void) {
-    for (const startup of this.startupSystems) {
-      startup(this);
+  public run<T extends (...args: any[]) => void>(cb: T) {
+    for (let i = 0; i < this.startupSystems.length; i++) {
+      this.startupSystems[i](this);
     }
 
     this.timer.reset();
@@ -166,11 +177,14 @@ export class Ecs {
     this.startupSystems.push(system);
   }
 
-  public tick() {
-    for (const system of this.systems) {
-      system(this);
+  public tick(t?: number) {
+    this.timer.tick(t);
+
+    for (let i = 0; i < this.systems.length; i++) {
+      this.systems[i](this);
     }
-    this.timer.tick();
+
+    // this.timer.tick(t);
   }
 
   public remove<C>(entity: Entity, component: C): boolean {
@@ -197,17 +211,20 @@ export class Ecs {
     const resources = [];
     const componentsResult: ComponentResults<C> = [];
 
-    for (const resourceType of resourceQuery) {
-      resources.push(this.resources.getResource(resourceType));
+    for (let i = 0; i < resourceQuery.length; i++) {
+      resources.push(this.resources.getResource(resourceQuery[i]));
     }
 
-    for (const entry of this.allocator.entities) {
+    for (let i = 0; i < this.allocator.entities.length; i++) {
+      const entry = this.allocator.entities[i];
       const components = [entry] as unknown as ComponentResults<C>;
 
       let doesMatch = true;
 
       if (withoutQuery.length) {
-        for (const withoutQueryComponent of withoutQuery) {
+        // for (const withoutQueryComponent of withoutQuery) {
+        for (let i = 0; i < withoutQuery.length; i++) {
+          const withoutQueryComponent = withoutQuery[i];
           // Get comopnent list
           const list = this.componentListMap.get<typeof withoutQueryComponent>(
             withoutQueryComponent
@@ -227,7 +244,8 @@ export class Ecs {
       }
 
       if (withQuery.length) {
-        for (const withQueryComponent of withQuery) {
+        for (let i = 0; i < withQuery.length; i++) {
+          const withQueryComponent = withQuery[i];
           const list =
             this.componentListMap.get<typeof withQueryComponent>(
               withQueryComponent
@@ -248,7 +266,8 @@ export class Ecs {
       }
 
       if (hasQuery.length) {
-        for (const hasQueryComponent of hasQuery) {
+        for (let i = 0; i < hasQuery.length; i++) {
+          const hasQueryComponent = hasQuery[i];
           const list =
             this.componentListMap.get<typeof hasQueryComponent>(
               hasQueryComponent

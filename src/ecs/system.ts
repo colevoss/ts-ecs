@@ -88,7 +88,7 @@ export function system<
     ...query,
   };
 
-  return (ecs: Ecs) => {
+  return function systemRunner(ecs: Ecs) {
     const results = ecs.query(queryParams);
     handler(results);
   };
