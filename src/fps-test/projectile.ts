@@ -14,10 +14,10 @@ export class Projectile extends T.Object3D {
     const material = new T.MeshBasicMaterial({ color: 0x00ff00 });
     const mesh = new T.Mesh(geometry, material);
 
-    const helper = new T.AxesHelper(1);
+    // const helper = new T.AxesHelper(1);
 
     super.add(mesh);
-    super.add(helper);
+    // super.add(helper);
 
     // super(geometry, mesh);
 
@@ -39,21 +39,12 @@ export class Fired extends NumberComponent {
 
   public isExpired(now: number) {
     return false;
-    return now - this.firedAt > 2;
+    return now - this.firedAt > 5;
   }
 }
 
 @Component()
 export class ExpiredProjectile extends EmptyComponent {}
-
-// @Component()
-// export class Fired {
-//   public speed: number;
-//
-//   constructor(speed: number) {
-//     this.speed = speed;
-//   }
-// }
 
 @Component()
 export class ProjectileManager {

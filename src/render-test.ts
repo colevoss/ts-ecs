@@ -1,5 +1,5 @@
 import * as T from "three";
-import { Ecs, system, Component } from "./ecs";
+import { Ecs, eagerSystem, Component } from "./ecs";
 import {
   Vec2Binding,
   KeyBind,
@@ -93,7 +93,7 @@ world.registerResource(new Scene());
 const stats = new Stats();
 world.registerResource(stats);
 
-const sceneSetup = system(
+const sceneSetup = eagerSystem(
   { res: [Scene] },
   function setup({ resources, commands }) {
     const [scene] = resources;
@@ -126,7 +126,7 @@ const sceneSetup = system(
   }
 );
 
-const spawnCubes = system(
+const spawnCubes = eagerSystem(
   { has: [Cube, Position], res: [Scene] },
   function spawn({ components, resources }) {
     const [scene] = resources;
@@ -139,7 +139,7 @@ const spawnCubes = system(
   }
 );
 
-const spawnCapsuleSystem = system(
+const spawnCapsuleSystem = eagerSystem(
   { has: [Capsule, Position], res: [Scene] },
   function spawnCapsules({ components, resources }) {
     const [scene] = resources;
@@ -152,13 +152,13 @@ const spawnCapsuleSystem = system(
   }
 );
 
-const renderScene = system({ res: [Scene] }, function render({ resources }) {
+const renderScene = eagerSystem({ res: [Scene] }, function render({ resources }) {
   const [scene] = resources;
 
   scene.render();
 });
 
-const rotateSystem = system(
+const rotateSystem = eagerSystem(
   { has: [Cube, Rotate, Move] },
   function rotate({ components, commands }) {
     const deltaTime = commands.timer.deltaTime * 10;
@@ -176,7 +176,7 @@ const rotateSystem = system(
   }
 );
 
-const rotateCapsuleSystem = system(
+const rotateCapsuleSystem = eagerSystem(
   { has: [Capsule, Rotate] },
   function rotateCapsule({ components, commands }) {
     const deltaTime = commands.timer.deltaTime * 10;
@@ -189,7 +189,7 @@ const rotateCapsuleSystem = system(
   }
 );
 
-const inputSystem = system(
+const inputSystem = eagerSystem(
   { res: [Scene] },
   function input({ resources, commands }) {
     const deltaTime = commands.timer.deltaTime;
@@ -220,13 +220,13 @@ const inputSystem = system(
 /*   } */
 /* ); */
 
-const startStats = system({ res: [Stats] }, ({ resources }) => {
+const startStats = eagerSystem({ res: [Stats] }, ({ resources }) => {
   const [stats] = resources;
 
   stats.startStats();
 });
 
-const statSystem = system({ res: [Stats] }, function stat({ resources }) {
+const statSystem = eagerSystem({ res: [Stats] }, function stat({ resources }) {
   const [stats] = resources;
 
   stats.tick();

@@ -1,5 +1,6 @@
 import { Commands, Ecs } from "./ecs";
 import { Entity } from "./entity";
+import { Query } from "./query";
 
 export type ComponentTupleInstances<T extends ComponentTypeTuple> = {
   [K in keyof T]: InstanceType<T[K]>;
@@ -11,7 +12,7 @@ export type ComponentType = {
 
 export type ComponentTypeTuple = ComponentType[];
 
-export type Test<T extends ComponentTypeTuple> = [...T] | never[];
+export type ComponentTuple<T extends ComponentTypeTuple> = [...T] | never[];
 
 export interface QueryParams<
   H extends ComponentTypeTuple,
@@ -19,14 +20,10 @@ export interface QueryParams<
   Wo extends ComponentTypeTuple,
   R extends ComponentTypeTuple
 > {
-  /* has: [...H]; */
-  /* with: [...W]; */
-  /* res: [...R]; */
-  /* without: [...Wo]; */
-  has: Test<H>;
-  with: Test<W>;
-  res: Test<R>;
-  without: Test<Wo>;
+  has: ComponentTuple<H>;
+  with: ComponentTuple<W>;
+  res: ComponentTuple<R>;
+  without: ComponentTuple<Wo>;
 }
 
 export const defaultQueryParams = {
@@ -74,7 +71,7 @@ export type SystemFn<
 
 export type SystemRunner = (ecs: Ecs) => void;
 
-export function system<
+export function eagerSystem<
   C extends ComponentTypeTuple,
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
@@ -88,8 +85,55 @@ export function system<
     ...query,
   };
 
-  return function systemRunner(ecs: Ecs) {
-    const results = ecs.query(queryParams);
+  return function (ecs: Ecs) {
+    const results = ecs.query.run(queryParams);
     handler(results);
+  };
+}
+
+type LazySystemHandlerParams<R extends ComponentTypeTuple> = {
+  resources: QueryResults<never, R>["resources"];
+  query: Query;
+  commands: Commands;
+};
+
+export type LazySystemHandlerFn<R extends ComponentTypeTuple> = (
+  params: LazySystemHandlerParams<R>
+) => void;
+
+type LazyResourceQueryParams<R extends ComponentTypeTuple> = QueryParams<
+  never,
+  never,
+  never,
+  R
+>["res"];
+
+export function system<R extends ComponentTypeTuple>(
+  handler: LazySystemHandlerFn<R>
+): SystemRunner;
+export function system<R extends ComponentTypeTuple>(
+  query: LazyResourceQueryParams<R>,
+  handler: LazySystemHandlerFn<R>
+): SystemRunner;
+export function system<R extends ComponentTypeTuple>(
+  queryHandler: LazyResourceQueryParams<R> | LazySystemHandlerFn<R>,
+  handler?: LazySystemHandlerFn<R>
+): SystemRunner {
+  let queryParams: LazyResourceQueryParams<R> = [];
+  let systemHandler: LazySystemHandlerFn<R>;
+
+  if (handler !== undefined) {
+    systemHandler = handler;
+    queryParams = queryHandler as LazyResourceQueryParams<R>;
+  } else {
+    systemHandler = queryHandler as LazySystemHandlerFn<R>;
+  }
+
+  return function (ecs: Ecs) {
+    systemHandler({
+      resources: ecs.query.resources(queryParams),
+      query: ecs.query,
+      commands: ecs.commands,
+    });
   };
 }
