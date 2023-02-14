@@ -1,49 +1,9 @@
 import { ComponentList, Constructor, getComponentName } from "./components";
 import { Entity, EntityAllocator } from "./entity";
-import {
-  QueryParams,
-  ComponentTypeTuple,
-  ComponentResults,
-  ComponentResult,
-  SystemRunner,
-  QueryResults,
-  ResourceTypeResult,
-} from "./system";
+import { SystemRunner } from "./system";
 import { ResourceContainer } from "./resource";
-
-export class Timer {
-  start: number;
-  last: number;
-  deltaTime: number;
-  public betterDur: number;
-
-  constructor() {
-    this.last = Date.now();
-    this.start = this.last;
-    this.deltaTime = 0;
-    this.betterDur = 0;
-  }
-
-  public reset() {
-    this.start = Date.now();
-  }
-
-  public duration() {
-    return (Date.now() - this.start) / 1000;
-  }
-
-  // public get deltaTime(): number {
-  //   return (Date.now() - this.last) / 1000;
-  // }
-
-  public tick(_t?: number) {
-    // this.last = t || Date.now();
-    const now = Date.now();
-    this.deltaTime = (now - this.last) / 1000;
-    this.last = now;
-    this.betterDur = (this.last - this.start) / 1000;
-  }
-}
+import { Query } from "./query";
+import { Timer } from "./timer";
 
 export class ComponentListMap {
   private componentListMap: Map<string, ComponentList<unknown>> = new Map();
@@ -128,8 +88,9 @@ export class Ecs {
   private systems: SystemRunner[] = [];
   private startupSystems: SystemRunner[] = [];
   public timer: Timer;
-  private resources: ResourceContainer;
-  private commands: Commands;
+  public resources: ResourceContainer;
+  public commands: Commands;
+  public query: Query;
 
   constructor() {
     this.allocator = new EntityAllocator();
@@ -137,6 +98,7 @@ export class Ecs {
     this.timer = new Timer();
     this.resources = new ResourceContainer();
     this.commands = new Commands(this);
+    this.query = new Query(this);
   }
 
   public registerResource<T extends Constructor>(t: InstanceType<T>) {
@@ -178,13 +140,14 @@ export class Ecs {
   }
 
   public tick(t?: number) {
-    this.timer.tick(t);
+    // this.timer.tick(t);
+    // let x = 0;
 
     for (let i = 0; i < this.systems.length; i++) {
       this.systems[i](this);
     }
 
-    // this.timer.tick(t);
+    this.timer.tick(t);
   }
 
   public remove<C>(entity: Entity, component: C): boolean {
@@ -195,114 +158,5 @@ export class Ecs {
     }
 
     return list.remove(entity);
-  }
-
-  public query<
-    C extends ComponentTypeTuple,
-    W extends ComponentTypeTuple,
-    Wo extends ComponentTypeTuple,
-    R extends ComponentTypeTuple
-  >(query: QueryParams<C, W, Wo, R>): QueryResults<C, R> {
-    const hasQuery = query.has;
-    const withQuery = query.with;
-    const withoutQuery = query.without;
-    const resourceQuery = query.res;
-
-    const resources = [];
-    const componentsResult: ComponentResults<C> = [];
-
-    for (let i = 0; i < resourceQuery.length; i++) {
-      resources.push(this.resources.getResource(resourceQuery[i]));
-    }
-
-    for (let i = 0; i < this.allocator.entities.length; i++) {
-      const entry = this.allocator.entities[i];
-      const components = [entry] as unknown as ComponentResults<C>;
-
-      let doesMatch = true;
-
-      if (withoutQuery.length) {
-        // for (const withoutQueryComponent of withoutQuery) {
-        for (let i = 0; i < withoutQuery.length; i++) {
-          const withoutQueryComponent = withoutQuery[i];
-          // Get comopnent list
-          const list = this.componentListMap.get<typeof withoutQueryComponent>(
-            withoutQueryComponent
-          );
-
-          if (!list) {
-            continue;
-          }
-
-          // If the entity has this component, we dont want this entity
-          doesMatch = !list.has(entry);
-        }
-
-        if (!doesMatch) {
-          continue;
-        }
-      }
-
-      if (withQuery.length) {
-        for (let i = 0; i < withQuery.length; i++) {
-          const withQueryComponent = withQuery[i];
-          const list =
-            this.componentListMap.get<typeof withQueryComponent>(
-              withQueryComponent
-            );
-
-          if (!list) {
-            doesMatch = false;
-            continue;
-          }
-
-          // If the entity has this component, we dont want this entity
-          doesMatch = list.has(entry);
-        }
-
-        if (!doesMatch) {
-          continue;
-        }
-      }
-
-      if (hasQuery.length) {
-        for (let i = 0; i < hasQuery.length; i++) {
-          const hasQueryComponent = hasQuery[i];
-          const list =
-            this.componentListMap.get<typeof hasQueryComponent>(
-              hasQueryComponent
-            );
-
-          if (!list) {
-            doesMatch = false;
-            continue;
-          }
-
-          // If the entity has this component, we dont want this entity
-          const component = list.get(entry);
-
-          if (!component) {
-            doesMatch = false;
-          } else {
-            components.push(
-              // @ts-ignore
-              component as InstanceType<typeof hasQueryComponent>
-            );
-          }
-        }
-
-        if (!doesMatch) {
-          continue;
-        }
-
-        componentsResult.push(components as ComponentResult<C>);
-      }
-    }
-
-    return {
-      components: componentsResult,
-      resources: resources as ResourceTypeResult<R>,
-      commands: this.commands,
-    };
   }
 }
