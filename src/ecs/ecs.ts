@@ -3,7 +3,9 @@ import { Entity, EntityAllocator } from "./entity";
 import { SystemRunner } from "./system";
 import { ResourceContainer } from "./resource";
 import { Query } from "./query";
-import { Timer } from "./timer";
+import { Commands } from "./commands";
+import { Plugin } from "./plugin";
+import { EventMap, Event } from "./events";
 
 export class ComponentListMap {
   private componentListMap: Map<string, ComponentList<unknown>> = new Map();
@@ -61,33 +63,26 @@ export class EntityBuilder {
     this.ecs.remove(this.entity, component);
     return this;
   }
-}
 
-export class Commands {
-  private ecs: Ecs;
-  public timer: Timer;
-
-  constructor(ecs: Ecs) {
-    this.ecs = ecs;
-    this.timer = ecs.timer;
+  public destroy(): boolean {
+    return this.ecs.destroyEntity(this.entity);
   }
 
-  public entity(entity: Entity): EntityBuilder {
-    return new EntityBuilder(this.ecs, entity);
-  }
-
-  // TODO: Refactor this to remove `Ecs.spawn`
-  public spawn(): EntityBuilder {
-    return this.ecs.spawn();
+  public kill(): boolean {
+    return this.ecs.killEntity(this.entity);
   }
 }
 
 export class Ecs {
   public allocator: EntityAllocator;
   public componentListMap: ComponentListMap;
+
+  public eventMap: EventMap;
+
   private systems: SystemRunner[] = [];
   private startupSystems: SystemRunner[] = [];
-  public timer: Timer;
+  private plugins: Plugin[] = [];
+
   public resources: ResourceContainer;
   public commands: Commands;
   public query: Query;
@@ -95,22 +90,37 @@ export class Ecs {
   constructor() {
     this.allocator = new EntityAllocator();
     this.componentListMap = new ComponentListMap();
-    this.timer = new Timer();
     this.resources = new ResourceContainer();
     this.commands = new Commands(this);
     this.query = new Query(this);
+    this.eventMap = new EventMap();
+  }
+
+  public registerEvent<M>(eventType: Event<M>) {
+    this.eventMap.registerEventType(eventType);
   }
 
   public registerResource<T extends Constructor>(t: InstanceType<T>) {
     this.resources.set(t);
   }
 
+  public resisterPlugin<P extends Plugin>(plugin: P): Ecs {
+    this.plugins.push(plugin);
+    return this;
+  }
+
   public run<T extends (...args: any[]) => void>(cb: T) {
+    // this.timer.run();
+
+    for (let i = 0; i < this.plugins.length; i++) {
+      this.plugins[i].build(this);
+    }
+
     for (let i = 0; i < this.startupSystems.length; i++) {
       this.startupSystems[i](this);
     }
 
-    this.timer.reset();
+    // this.timer.reset();
 
     cb();
   }
@@ -139,15 +149,12 @@ export class Ecs {
     this.startupSystems.push(system);
   }
 
-  public tick(t?: number) {
+  public tick() {
     // this.timer.tick(t);
-    // let x = 0;
 
     for (let i = 0; i < this.systems.length; i++) {
       this.systems[i](this);
     }
-
-    this.timer.tick(t);
   }
 
   public remove<C>(entity: Entity, component: C): boolean {
@@ -158,5 +165,17 @@ export class Ecs {
     }
 
     return list.remove(entity);
+  }
+
+  public destroyEntity(entity: Entity): boolean {
+    this.componentListMap.maps.forEach((map) => {
+      map.remove(entity);
+    });
+
+    return this.allocator.dealloc(entity);
+  }
+
+  public killEntity(entity: Entity): boolean {
+    return this.allocator.dealloc(entity);
   }
 }

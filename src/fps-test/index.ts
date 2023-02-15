@@ -1,5 +1,13 @@
 import * as T from "three";
-import { Ecs, eagerSystem, system } from "../ecs";
+import {
+  Ecs,
+  eagerSystem,
+  system,
+  entitySystem,
+  Time,
+  Event,
+  EventWriter,
+} from "../ecs";
 import { Player } from "./player";
 import { FpsScene } from "./scene";
 import {
@@ -10,6 +18,8 @@ import {
   ExpiredProjectile,
 } from "./projectile";
 import { Vector3 } from "three";
+
+class MyEvent extends Event<string> {}
 
 function degToRad(deg: number): number {
   return deg * (Math.PI / 180);
@@ -37,11 +47,11 @@ class Floor extends T.Object3D {
 }
 
 const lookSystem = system(
-  [Player, FpsScene],
-  function lazyLook({ resources, commands }) {
-    const lookDelta = commands.timer.deltaTime / 10;
+  [Player, FpsScene, Time],
+  function lazyLook({ resources }) {
+    const [player, scene, time] = resources;
+    const lookDelta = time.delta / 10;
 
-    const [player, scene] = resources;
     const x = scene.input.inputs.look.x;
     const y = scene.input.inputs.look.y;
     const lookX = x * lookDelta;
@@ -54,12 +64,12 @@ const lookSystem = system(
 );
 
 const moveSystem = system(
-  [Player, FpsScene],
-  function move({ resources, commands }) {
-    const [player, scene] = resources;
+  [Player, FpsScene, Time],
+  function move({ resources }) {
+    const [player, scene, time] = resources;
     const isSprinting = scene.input.inputs.sprint.pressed;
 
-    const moveDetla = commands.timer.deltaTime * 50 * (isSprinting ? 1.5 : 0.5);
+    const moveDetla = time.delta * 50 * (isSprinting ? 1.5 : 0.5);
     const moveForward = scene.input.inputs.move.y * moveDetla;
     const moveSide = scene.input.inputs.move.x * moveDetla;
 
@@ -80,17 +90,22 @@ const renderSystem = system(
   }
 );
 
-const sceneSetupSystem = system([FpsScene], function setupScene({ resources }) {
-  const [scene] = resources;
-  const floor = new Floor();
+const sceneSetupSystem = system(
+  [FpsScene, Time],
+  function setupScene({ resources }) {
+    const [scene, time] = resources;
+    const floor = new Floor();
 
-  scene.setup();
-  scene.input.enable();
+    scene.setup();
+    scene.input.enable();
 
-  const light = new T.PointLight(0xffffff, 3);
-  scene.scene.add(light);
-  scene.scene.add(floor);
-});
+    const light = new T.PointLight(0xffffff, 3);
+    scene.scene.add(light);
+    scene.scene.add(floor);
+
+    time.run();
+  }
+);
 
 const spawnPlayerSystem = eagerSystem(
   { res: [FpsScene, Player] },
@@ -120,18 +135,18 @@ const shootSystem = system(
 
     projectileManager.shoot();
 
-    commands.spawn().insert(new Projectile()).insert(new Fire(2));
+    commands.spawn().insert(new Projectile()).insert(new Fire(20));
   }
 );
 
 const spawnProjectileSystem = eagerSystem(
-  { has: [Projectile, Fire], res: [Player, FpsScene] },
+  { has: [Projectile, Fire], res: [Player, FpsScene, Time] },
   function spawnProjectile({ components, resources, commands }) {
     if (components.length === 0) {
       return;
     }
 
-    const [player, scene] = resources;
+    const [player, scene, time] = resources;
     const v = new Vector3();
     const playerLocation = player.getWorldPosition(v);
 
@@ -152,36 +167,39 @@ const spawnProjectileSystem = eagerSystem(
       commands
         .entity(entity)
         .remove(fire)
-        .insert(new Fired(fire.value, commands.timer.betterDur));
+        .insert(new Fired(fire.value, time.duration));
     }
   }
 );
 
-const expireProjectileSystem = system(function expireProjectile({
-  commands,
-  query,
-}) {
-  const { components } = query.run({
-    has: [Fired],
-    with: [Projectile],
-    without: [ExpiredProjectile],
-  });
+const expireProjectileSystem = system(
+  [Time],
+  function expireProjectile({ commands, resources, query }) {
+    const [time] = resources;
+    const { components } = query.run({
+      has: [Fired],
+      with: [Projectile],
+      without: [ExpiredProjectile],
+    });
 
-  for (const [entity, fired] of components) {
-    if (fired.isExpired(commands.timer.betterDur)) {
-      commands.entity(entity).remove(fired).insert(new ExpiredProjectile());
+    for (const [entity, fired] of components) {
+      if (fired.isExpired(time.duration)) {
+        commands.entity(entity).remove(fired).insert(new ExpiredProjectile());
+      }
     }
   }
-});
+);
 
-const projectileSystem = system(function lazyProjectile({ commands, query }) {
-  const { components } = query.run({ has: [Projectile, Fired] });
-
-  for (const [, projectile, fired] of components) {
-    const distance = fired.value * commands.timer.deltaTime;
+const moveProjectileSystem = entitySystem(
+  { has: [Projectile, Fired], res: [Time] },
+  function moveProjectile(components, { resources }) {
+    const [time] = resources;
+    const [, projectile, fired] = components;
+    // const [scene, player] = resources;
+    const distance = fired.value * time.delta;
     projectile.translateZ(-distance);
   }
-});
+);
 
 const despawnProjectileSystem = system(
   [FpsScene],
@@ -191,7 +209,36 @@ const despawnProjectileSystem = system(
 
     for (const [entity, projectile] of components) {
       scene.scene.remove(projectile);
-      commands.entity(entity).remove(Projectile).remove(ExpiredProjectile);
+      // commands.entity(entity).remove(Projectile).remove(ExpiredProjectile);
+      // commands.entity(entity).destroy();
+      commands.entity(entity).kill();
+    }
+  }
+);
+
+const testPauseSystem = system([FpsScene, Time], function pause({ resources }) {
+  const [scene, time] = resources;
+
+  if (scene.input.inputs.pause.clicked) {
+    time.pause();
+  } else {
+    time.run();
+  }
+});
+
+const timeSystem = system([Time], function tickTime({ resources }) {
+  const [time] = resources;
+  time.tick();
+});
+
+const testEventSystem = eagerSystem(
+  { eventWriter: EventWriter(MyEvent), res: [FpsScene, Time] },
+  ({ eventWriters, resources }) => {
+    const [scene, time] = resources;
+
+    if (scene.testTimer.tick(time.delta)) {
+      const [e] = eventWriters;
+      e.send(new Date().toString());
     }
   }
 );
@@ -200,28 +247,35 @@ export default function main() {
   const world = new Ecs();
   const scene = new FpsScene();
   const player = new Player(scene);
+  const time = new Time();
 
   // gameplay.enable();
 
   function renderWorld() {
-    // console.log(t);
     world.tick();
     requestAnimationFrame(renderWorld);
   }
 
+  world.registerEvent(new MyEvent());
   world.addStartupSystem(sceneSetupSystem);
   world.addStartupSystem(spawnPlayerSystem);
 
+  world.registerResource(time);
   world.registerResource(scene);
   world.registerResource(player);
 
+  world.addSystem(timeSystem);
   world.addSystem(moveSystem);
   world.addSystem(lookSystem);
   world.addSystem(shootSystem);
   world.addSystem(spawnProjectileSystem);
-  world.addSystem(projectileSystem);
+
+  world.addSystem(testEventSystem);
+
+  world.addSystem(moveProjectileSystem);
   world.addSystem(expireProjectileSystem);
   world.addSystem(despawnProjectileSystem);
+  world.addSystem(testPauseSystem);
 
   // Should be last
   world.addSystem(renderSystem);

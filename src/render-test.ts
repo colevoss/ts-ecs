@@ -161,7 +161,7 @@ const renderScene = eagerSystem({ res: [Scene] }, function render({ resources })
 const rotateSystem = eagerSystem(
   { has: [Cube, Rotate, Move] },
   function rotate({ components, commands }) {
-    const deltaTime = commands.timer.deltaTime * 10;
+    const deltaTime = commands.timer.delta * 10;
 
     for (const [, cube, rotate] of components) {
       const rate = rotate.rate * deltaTime;
@@ -179,7 +179,7 @@ const rotateSystem = eagerSystem(
 const rotateCapsuleSystem = eagerSystem(
   { has: [Capsule, Rotate] },
   function rotateCapsule({ components, commands }) {
-    const deltaTime = commands.timer.deltaTime * 10;
+    const deltaTime = commands.timer.delta * 10;
 
     for (const [, capsule, rotate] of components) {
       const rate = rotate.rate * deltaTime;
@@ -192,7 +192,7 @@ const rotateCapsuleSystem = eagerSystem(
 const inputSystem = eagerSystem(
   { res: [Scene] },
   function input({ resources, commands }) {
-    const deltaTime = commands.timer.deltaTime;
+    const deltaTime = commands.timer.delta;
     const moveRight = gameplay.inputs.move.x;
     const moveForward = gameplay.inputs.move.y;
 

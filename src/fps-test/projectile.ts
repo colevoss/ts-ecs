@@ -38,8 +38,7 @@ export class Fired extends NumberComponent {
   }
 
   public isExpired(now: number) {
-    return false;
-    return now - this.firedAt > 5;
+    return now - this.firedAt > 2;
   }
 }
 

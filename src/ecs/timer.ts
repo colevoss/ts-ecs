@@ -1,33 +1,49 @@
+export enum TimerMode {
+  Once = "Once",
+  Repeating = "Repeating",
+}
+
 export class Timer {
-  start: number;
-  last: number;
-  deltaTime: number;
-  public betterDur: number;
-
-  constructor() {
-    this.last = Date.now();
-    this.start = this.last;
-    this.deltaTime = 0;
-    this.betterDur = 0;
+  private time: number;
+  private elapsed: number = 0;
+  private mode: TimerMode;
+  public remaining: number = 0;
+  // Time in seconds
+  constructor(time: number, mode: TimerMode = TimerMode.Once) {
+    this.time = time;
+    this.mode = mode;
   }
 
-  public reset() {
-    this.start = Date.now();
+  // number in seconds
+  public tick(delta: number) {
+    this.elapsed = this.elapsed + delta;
+    this.remaining = this.time - this.elapsed;
+
+    const done = this.elapsed >= this.time;
+
+    if (done && this.mode === TimerMode.Repeating) {
+      this.elapsed = 0;
+    }
+
+    return done;
   }
 
-  public duration() {
-    return (Date.now() - this.start) / 1000;
+  public static fromSeconds(
+    seconds: number,
+    mode: TimerMode = TimerMode.Once
+  ): Timer {
+    return new Timer(seconds, mode);
   }
 
-  // public get deltaTime(): number {
-  //   return (Date.now() - this.last) / 1000;
-  // }
+  public static fromMs(ms: number, mode: TimerMode = TimerMode.Once): Timer {
+    return new Timer(ms / 1000, mode);
+  }
 
-  public tick(_t?: number) {
-    // this.last = t || Date.now();
-    const now = Date.now();
-    this.deltaTime = (now - this.last) / 1000;
-    this.last = now;
-    this.betterDur = (this.last - this.start) / 1000;
+  public static fromMinutes(
+    minutes: number,
+    mode: TimerMode = TimerMode.Once
+  ): Timer {
+    const seconds = minutes * 60;
+    return new Timer(seconds, mode);
   }
 }

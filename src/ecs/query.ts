@@ -1,10 +1,13 @@
 import { Ecs } from "./ecs";
+import { EventClassTypeArr, EventInstanceTuple } from "./events";
 import {
   ComponentResult,
   ComponentResults,
   ComponentTypeTuple,
   QueryParams,
   ResourceTypeResult,
+  PerEntityHandlerParams,
+  QueryResults,
 } from "./system";
 
 export const defaultQueryParams = {
@@ -22,7 +25,7 @@ export class Query {
   }
 
   public resources<R extends ComponentTypeTuple>(
-    resQuery: QueryParams<never, never, never, R>["res"]
+    resQuery: QueryParams<never, never, never, R, never>["res"]
   ) {
     const resources = [];
 
@@ -33,30 +36,144 @@ export class Query {
     return resources as ResourceTypeResult<R>;
   }
 
+  public runPerEntity<
+    C extends ComponentTypeTuple,
+    W extends ComponentTypeTuple,
+    Wo extends ComponentTypeTuple,
+    R extends ComponentTypeTuple,
+    Ew extends EventClassTypeArr
+  >(
+    query: Partial<QueryParams<C, W, Wo, R, Ew>>,
+    cb: (
+      components: ComponentResult<C>,
+      otherStuff: PerEntityHandlerParams<R>
+    ) => void
+  ) {
+    const fullQuery = {
+      ...defaultQueryParams,
+      ...query,
+    };
+
+    const resources = this.resources(fullQuery.res);
+    const otherParams = {
+      resources,
+      commands: this.ecs.commands,
+    };
+
+    for (let i = this.ecs.allocator.entities.length - 1; i >= 0; i--) {
+      const entry = this.ecs.allocator.entities[i];
+
+      if (!entry.isLive) {
+        continue;
+      }
+
+      const components = [entry] as unknown as ComponentResult<C>;
+
+      let doesMatch = true;
+
+      if (fullQuery.without.length > 0) {
+        for (let i = 0; i < fullQuery.without[i].length; i++) {
+          const withoutQueryComponent = fullQuery.without[i];
+          const list = this.ecs.componentListMap.get<
+            typeof withoutQueryComponent
+          >(withoutQueryComponent);
+
+          if (!list) {
+            continue;
+          }
+
+          doesMatch = !list.has(entry);
+        } // without loop
+
+        if (!doesMatch) {
+          continue;
+        }
+      }
+
+      if (fullQuery.with.length) {
+        for (let i = 0; i < fullQuery.with.length; i++) {
+          const withQueryComponent = fullQuery.with[i];
+          const list =
+            this.ecs.componentListMap.get<typeof withQueryComponent>(
+              withQueryComponent
+            );
+
+          if (!list) {
+            doesMatch = false;
+            continue;
+          }
+
+          doesMatch = list.has(entry);
+        }
+      }
+
+      if (fullQuery.has.length) {
+        for (let i = 0; i < fullQuery.has.length; i++) {
+          const hasQueryComponent = fullQuery.has[i];
+          const list =
+            this.ecs.componentListMap.get<typeof hasQueryComponent>(
+              hasQueryComponent
+            );
+
+          if (!list) {
+            doesMatch = false;
+            continue;
+          }
+
+          const component = list.get(entry);
+
+          if (!component) {
+            doesMatch = false;
+          } else {
+            components.push(
+              // @ts-ignore
+              component as InstanceType<typeof hasQueryComponent>
+            );
+          }
+        }
+
+        if (!doesMatch) {
+          continue;
+        }
+        //
+        // componentResult.push(components as ComponentResult<C>);
+      }
+
+      cb(components, otherParams);
+    }
+  }
+
   public run<
     C extends ComponentTypeTuple,
     W extends ComponentTypeTuple,
     Wo extends ComponentTypeTuple,
-    R extends ComponentTypeTuple
-  >(_query: Partial<QueryParams<C, W, Wo, R>>) {
-    const query = {
+    R extends ComponentTypeTuple,
+    Ew extends EventClassTypeArr
+  >(query: Partial<QueryParams<C, W, Wo, R, Ew>>): QueryResults<C, R, Ew> {
+    const fullQuery = {
       ...defaultQueryParams,
-      ..._query,
+      ...query,
     };
 
-    const resources = this.resources(query.res);
+    const resources = this.resources(fullQuery.res);
 
     const componentResult: ComponentResults<C> = [];
 
+    let eventWriters: EventInstanceTuple<Ew> = [];
+
+    if (query.eventWriter) {
+      eventWriters = query.eventWriter(this.ecs);
+    }
+
     for (let i = 0; i < this.ecs.allocator.entities.length; i++) {
       const entry = this.ecs.allocator.entities[i];
-      const components = [entry] as unknown as ComponentResults<C>;
+      const components = [entry] as unknown as ComponentResult<C>;
 
       let doesMatch = true;
 
-      if (query.without.length > 0) {
-        for (let i = 0; i < query.without[i].length; i++) {
-          const withoutQueryComponent = query.without[i];
+      if (fullQuery.without.length > 0) {
+        for (let i = 0; i < fullQuery.without[i].length; i++) {
+          const withoutQueryComponent = fullQuery.without[i];
           const list = this.ecs.componentListMap.get<
             typeof withoutQueryComponent
           >(withoutQueryComponent);
@@ -73,9 +190,9 @@ export class Query {
         }
       }
 
-      if (query.with.length) {
-        for (let i = 0; i < query.with.length; i++) {
-          const withQueryComponent = query.with[i];
+      if (fullQuery.with.length) {
+        for (let i = 0; i < fullQuery.with.length; i++) {
+          const withQueryComponent = fullQuery.with[i];
           const list =
             this.ecs.componentListMap.get<typeof withQueryComponent>(
               withQueryComponent
@@ -90,9 +207,9 @@ export class Query {
         }
       }
 
-      if (query.has.length) {
-        for (let i = 0; i < query.has.length; i++) {
-          const hasQueryComponent = query.has[i];
+      if (fullQuery.has.length) {
+        for (let i = 0; i < fullQuery.has.length; i++) {
+          const hasQueryComponent = fullQuery.has[i];
           const list =
             this.ecs.componentListMap.get<typeof hasQueryComponent>(
               hasQueryComponent
@@ -127,6 +244,7 @@ export class Query {
       components: componentResult,
       resources: resources,
       commands: this.ecs.commands,
-    };
+      eventWriters: eventWriters,
+    } as QueryResults<C, R, Ew>;
   }
 }

@@ -9,6 +9,7 @@ import {
   MouseMoveBinding,
   Vec2Binding,
 } from "../ecs/input";
+import { Timer, TimerMode } from "../ecs";
 
 export function initGameplayInput(element: HTMLCanvasElement) {
   const gameplay = new InputMap({
@@ -23,6 +24,7 @@ export function initGameplayInput(element: HTMLCanvasElement) {
       left: new KeyBind(KeyCode.A),
     }),
     click: new MouseClickBinding(MouseButton.Left),
+    pause: new MouseClickBinding(MouseButton.Right),
     sprint: new KeyBind(KeyCode.ShiftLeft),
   });
 
@@ -34,6 +36,7 @@ export class FpsScene {
   public renderer: Three.WebGLRenderer;
   public domElement: HTMLCanvasElement;
   public input: ReturnType<typeof initGameplayInput>;
+  public testTimer: Timer;
 
   public get width(): number {
     return window.innerWidth;
@@ -49,6 +52,8 @@ export class FpsScene {
     this.domElement = this.renderer.domElement;
     this.input = initGameplayInput(this.domElement);
     this.renderer.setSize(this.width, this.height);
+
+    this.testTimer = new Timer(2, TimerMode.Repeating);
   }
 
   public setup() {

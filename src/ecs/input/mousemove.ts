@@ -86,10 +86,10 @@ export class MouseMoveBinding implements InputBinding {
   }
 
   private pointerLockEnableHandler = () => {
-    console.log("Requesting pointer lock", this.pointerLockElement);
     if (document.pointerLockElement == this.pointerLockElement) {
       return;
     }
+    console.log("Requesting pointer lock", this.pointerLockElement);
     // @ts-ignore
     this.pointerLockElement
       // @ts-ignore
@@ -111,7 +111,6 @@ export class MouseMoveBinding implements InputBinding {
   };
 
   private reset = () => {
-    console.log("Resetting");
     this._movement.x = 0;
     this._movement.y = 0;
     this.cancelReset();

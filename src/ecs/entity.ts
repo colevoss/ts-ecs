@@ -23,6 +23,7 @@ export class Entity {
 
   public incrementGeneration(): void {
     this._generation += 1;
+    this._isLive = true;
   }
 
   public kill() {
