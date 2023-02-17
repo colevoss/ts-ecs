@@ -1,5 +1,5 @@
 import * as T from "three";
-import { Component, EmptyComponent, NumberComponent } from "../ecs";
+import { bundle, Component, EmptyComponent, NumberComponent } from "../ecs";
 
 @Component()
 export class Projectile extends T.Object3D {
@@ -69,3 +69,8 @@ export class ProjectileManager {
     this.lastFiredAt = Date.now();
   }
 }
+
+export const ShootBundle = bundle<{
+  projectile: Projectile;
+  fire: Fire;
+}>();

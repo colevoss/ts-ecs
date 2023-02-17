@@ -12,7 +12,19 @@ export class Commands {
     return this.ecs.entity(entity);
   }
 
-  public spawn(): EntityBuilder {
-    return this.ecs.spawn();
+  public spawn<T>(component?: T): EntityBuilder;
+  public spawn<T>(component?: T[]): EntityBuilder;
+  public spawn<T>(component?: T | T[]): EntityBuilder {
+    const entityBuilder = this.ecs.spawn();
+
+    if (!component) {
+      return entityBuilder;
+    }
+
+    const components = Array.isArray(component) ? component : [component];
+
+    entityBuilder.insert(components);
+
+    return entityBuilder;
   }
 }

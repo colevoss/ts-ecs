@@ -3,9 +3,11 @@ import { Entity, EntityAllocator } from "./entity";
 import { SystemRunner } from "./system";
 import { ResourceContainer } from "./resource";
 import { Query } from "./query";
+import * as NewQuery from "./newquery";
 import { Commands } from "./commands";
 import { Plugin } from "./plugin";
 import { EventMap, Event } from "./events";
+import * as NewSystem from "./newsystem";
 
 export class ComponentListMap {
   private componentListMap: Map<string, ComponentList<unknown>> = new Map();
@@ -54,8 +56,15 @@ export class EntityBuilder {
     this.entity = entity;
   }
 
-  public insert<T>(component: T): EntityBuilder {
-    this.ecs.insertComponentForEntity(this.entity, component);
+  public insert<T>(component: T): EntityBuilder;
+  public insert<T>(component: T[]): EntityBuilder;
+  public insert<T>(component: T[] | T): EntityBuilder {
+    const components: T[] = Array.isArray(component) ? component : [component];
+
+    for (const comp of components) {
+      this.ecs.insertComponentForEntity(this.entity, comp);
+    }
+
     return this;
   }
 
@@ -86,6 +95,10 @@ export class Ecs {
   public resources: ResourceContainer;
   public commands: Commands;
   public query: Query;
+  public newQuery: NewQuery.Query;
+
+  public systemsRunner: NewSystem.SystemRunner;
+  public startupSystemRunner: NewSystem.SystemRunner;
 
   constructor() {
     this.allocator = new EntityAllocator();
@@ -94,6 +107,11 @@ export class Ecs {
     this.commands = new Commands(this);
     this.query = new Query(this);
     this.eventMap = new EventMap();
+
+    // NEW
+    this.newQuery = new NewQuery.Query(this);
+    this.startupSystemRunner = new NewSystem.SystemRunner();
+    this.systemsRunner = new NewSystem.SystemRunner();
   }
 
   public registerEvent<M>(eventType: Event<M>) {
@@ -106,6 +124,13 @@ export class Ecs {
 
   public resisterPlugin<P extends Plugin>(plugin: P): Ecs {
     this.plugins.push(plugin);
+    return this;
+  }
+
+  public buildPlugins(): this {
+    for (let i = 0; i < this.plugins.length; i++) {
+      this.plugins[i].build(this);
+    }
     return this;
   }
 
@@ -143,6 +168,29 @@ export class Ecs {
   public addSystem(system: SystemRunner) {
     this.systems.push(system);
     return this;
+  }
+
+  public newAddSystem(system: NewSystem.SystemRunnable): this {
+    this.systemsRunner.addSystem(system);
+    return this;
+  }
+
+  public newAddStartupSystem(system: NewSystem.SystemRunnable): this {
+    this.startupSystemRunner.addSystem(system);
+    return this;
+  }
+
+  public newRun(cb: (...args: any[]) => void): this {
+    this.buildPlugins();
+
+    this.startupSystemRunner.run(this);
+
+    cb();
+    return this;
+  }
+
+  public newTick() {
+    this.systemsRunner.run(this);
   }
 
   public addStartupSystem(system: SystemRunner) {

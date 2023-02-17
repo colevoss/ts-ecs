@@ -1,10 +1,27 @@
+import { Ecs, Plugin, system } from "./ecs";
+import { LazySystem } from "./ecs/newsystem";
+
+export class StatsPlugin implements Plugin {
+  public build(ecs: Ecs): void {
+    const stats = new Stats();
+    ecs.registerResource(stats);
+    // ecs.addSystem(statSystem);
+    ecs.newAddSystem(statSystem);
+    stats.startStats();
+
+    setInterval(() => {
+      console.log("FPS:", stats.fps());
+    }, 1000);
+  }
+}
+
 export class Stats {
-  public fpsBufferLength = 30;
+  public fpsBufferLength;
   public fpsBuffer: number[] = [];
   public start: number = 0;
   public lastIndex: number = 0;
 
-  constructor(bufferLength: number = 30) {
+  constructor(bufferLength: number = 10) {
     this.fpsBufferLength = bufferLength;
     this.fpsBuffer = Array(this.fpsBufferLength).fill(0);
     this.reset();
@@ -59,3 +76,8 @@ export class Stats {
     this.start = Date.now();
   }
 }
+
+const statSystem = LazySystem.init({ res: [Stats] }, ({ resources }) => {
+  const [stats] = resources;
+  stats.tick();
+});

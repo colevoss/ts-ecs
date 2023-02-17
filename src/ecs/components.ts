@@ -70,11 +70,11 @@ export class ComponentList<T> {
   }
 }
 
-export abstract class CComponent {}
+// export abstract class CComponent {}
 
 export function Component(name?: string) {
   return <T extends Constructor>(superClass: T) => {
-    const newClass = class extends superClass implements IComponent {
+    const ComponentClass = class extends superClass implements IComponent {
       [componentName] = name || superClass.name;
       static [componentName] = name || superClass.name;
 
@@ -83,7 +83,7 @@ export function Component(name?: string) {
       }
     };
 
-    return newClass;
+    return ComponentClass;
   };
 }
 
@@ -91,4 +91,23 @@ export function getComponentName(component: {
   [componentName]?: string;
 }): string | null {
   return component[componentName] || null;
+}
+
+type BundleType<T> = {
+  [K in keyof T]-?: T[K] extends infer R ? R : never;
+};
+
+type ComponentBundleResult<T> = T[keyof T][];
+
+export function bundle<T>() {
+  return (componentBundle: BundleType<T>): ComponentBundleResult<T> => {
+    const components = [];
+
+    for (const k in componentBundle) {
+      const component = componentBundle[k];
+      components.push(component);
+    }
+
+    return components as ComponentBundleResult<T>;
+  };
 }

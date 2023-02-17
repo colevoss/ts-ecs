@@ -7,3 +7,4 @@ export * from "./input";
 export * from "./time";
 export * from "./timer";
 export * from "./events";
+export * from "./plugin";

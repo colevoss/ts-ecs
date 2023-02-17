@@ -53,6 +53,7 @@ export class FpsScene {
     this.input = initGameplayInput(this.domElement);
     this.renderer.setSize(this.width, this.height);
 
+    // this.testTimer = new Timer(2, TimerMode.Repeating);
     this.testTimer = new Timer(2, TimerMode.Repeating);
   }
 

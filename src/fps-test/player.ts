@@ -4,6 +4,7 @@ import { FpsScene } from "./scene";
 export class Player extends Three.Object3D {
   public camera: Three.PerspectiveCamera;
   public forward: Three.Vector3;
+  public shotsFired: number = 0;
 
   constructor(scene: FpsScene) {
     super();

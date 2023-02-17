@@ -152,11 +152,14 @@ const spawnCapsuleSystem = eagerSystem(
   }
 );
 
-const renderScene = eagerSystem({ res: [Scene] }, function render({ resources }) {
-  const [scene] = resources;
+const renderScene = eagerSystem(
+  { res: [Scene] },
+  function render({ resources }) {
+    const [scene] = resources;
 
-  scene.render();
-});
+    scene.render();
+  }
+);
 
 const rotateSystem = eagerSystem(
   { has: [Cube, Rotate, Move] },

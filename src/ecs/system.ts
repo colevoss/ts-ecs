@@ -4,8 +4,10 @@ import { Entity } from "./entity";
 import { Query } from "./query";
 import {
   EventClassTypeArr,
-  EventInstanceTuple,
+  EventWriterInstanceTuple,
   EventWriterGenerator,
+  EventReaderGenerator,
+  EventReaderInstanceTuple,
 } from "./events";
 
 export type ComponentTupleInstances<T extends ComponentTypeTuple> = {
@@ -25,13 +27,15 @@ export interface QueryParams<
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr
+  Ew extends EventClassTypeArr,
+  Er extends EventClassTypeArr
 > {
   has: ComponentTuple<H>;
   with: ComponentTuple<W>;
   res: ComponentTuple<R>;
   without: ComponentTuple<Wo>;
   eventWriter?: EventWriterGenerator<Ew>;
+  eventReader?: EventReaderGenerator<Er>;
   // eventWriter?: EventTypeTuple<Ew>;
 }
 
@@ -49,18 +53,22 @@ export type ResourceTypeResult<R extends ComponentTypeTuple> = {
 export type ComponentResult<C extends ComponentTypeTuple> = [
   entity: Entity,
   // ...components: ComponentTupleInstances<QueryParams<C, [], [], []>["has"]>
-  ...components: ComponentTupleInstances<QueryParams<C, [], [], [], []>["has"]>
+  ...components: ComponentTupleInstances<
+    QueryParams<C, [], [], [], [], []>["has"]
+  >
 ];
 
 export type QueryResults<
   C extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr
+  Ew extends EventClassTypeArr,
+  Er extends EventClassTypeArr
 > = {
   components: ComponentResults<C>;
   resources: ResourceTypeResult<R>;
   commands: Commands;
-  eventWriters: EventInstanceTuple<Ew>;
+  eventWriters: EventWriterInstanceTuple<Ew>;
+  eventReaders: EventReaderInstanceTuple<Er>;
 };
 
 export type ComponentResults<H extends ComponentTypeTuple> =
@@ -69,18 +77,20 @@ export type ComponentResults<H extends ComponentTypeTuple> =
 export type SystemHandlerFn<
   C extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr
-> = (results: QueryResults<C, R, Ew>) => void;
+  Ew extends EventClassTypeArr,
+  Er extends EventClassTypeArr
+> = (results: QueryResults<C, R, Ew, Er>) => void;
 
 export type SystemFn<
   C extends ComponentTypeTuple,
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr
+  Ew extends EventClassTypeArr,
+  Er extends EventClassTypeArr
 > = (
-  query: QueryParams<C, W, Wo, R, Ew>,
-  handler: SystemHandlerFn<C, R, Ew>
+  query: QueryParams<C, W, Wo, R, Ew, Er>,
+  handler: SystemHandlerFn<C, R, Ew, Er>
 ) => unknown;
 
 export type SystemRunner = (ecs: Ecs) => void;
@@ -90,10 +100,11 @@ export function eagerSystem<
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr
+  Ew extends EventClassTypeArr,
+  Er extends EventClassTypeArr
 >(
-  query: Partial<QueryParams<C, W, Wo, R, Ew>>,
-  handler: SystemHandlerFn<C, R, Ew>
+  query: Partial<QueryParams<C, W, Wo, R, Ew, Er>>,
+  handler: SystemHandlerFn<C, R, Ew, Er>
 ): SystemRunner {
   const queryParams = {
     ...defaultQueryParams,
@@ -107,7 +118,7 @@ export function eagerSystem<
 }
 
 type LazySystemHandlerParams<R extends ComponentTypeTuple> = {
-  resources: QueryResults<never, R, never>["resources"];
+  resources: QueryResults<never, R, never, never>["resources"];
   query: Query;
   commands: Commands;
 };
@@ -121,6 +132,7 @@ type LazyResourceQueryParams<R extends ComponentTypeTuple> = QueryParams<
   never,
   never,
   R,
+  never,
   never
 >["res"];
 
@@ -155,7 +167,7 @@ export function system<R extends ComponentTypeTuple>(
 }
 
 export type PerEntityHandlerParams<R extends ComponentTypeTuple> = {
-  resources: QueryResults<never, R, never>["resources"];
+  resources: QueryResults<never, R, never, never>["resources"];
   commands: Commands;
 };
 
@@ -178,9 +190,10 @@ export function entitySystem<
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr
+  Ew extends EventClassTypeArr,
+  Er extends EventClassTypeArr
 >(
-  query: Partial<QueryParams<C, W, Wo, R, Ew>>,
+  query: Partial<QueryParams<C, W, Wo, R, Ew, Er>>,
   handler: EntitySystemHandler<C, R>
 ): SystemRunner {
   return (ecs: Ecs) => {

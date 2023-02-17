@@ -1,5 +1,9 @@
 import { Ecs } from "./ecs";
-import { EventClassTypeArr, EventInstanceTuple } from "./events";
+import {
+  EventClassTypeArr,
+  EventReaderInstanceTuple,
+  EventWriterInstanceTuple,
+} from "./events";
 import {
   ComponentResult,
   ComponentResults,
@@ -25,7 +29,7 @@ export class Query {
   }
 
   public resources<R extends ComponentTypeTuple>(
-    resQuery: QueryParams<never, never, never, R, never>["res"]
+    resQuery: QueryParams<never, never, never, R, never, never>["res"]
   ) {
     const resources = [];
 
@@ -41,9 +45,10 @@ export class Query {
     W extends ComponentTypeTuple,
     Wo extends ComponentTypeTuple,
     R extends ComponentTypeTuple,
-    Ew extends EventClassTypeArr
+    Ew extends EventClassTypeArr,
+    Er extends EventClassTypeArr
   >(
-    query: Partial<QueryParams<C, W, Wo, R, Ew>>,
+    query: Partial<QueryParams<C, W, Wo, R, Ew, Er>>,
     cb: (
       components: ComponentResult<C>,
       otherStuff: PerEntityHandlerParams<R>
@@ -148,8 +153,11 @@ export class Query {
     W extends ComponentTypeTuple,
     Wo extends ComponentTypeTuple,
     R extends ComponentTypeTuple,
-    Ew extends EventClassTypeArr
-  >(query: Partial<QueryParams<C, W, Wo, R, Ew>>): QueryResults<C, R, Ew> {
+    Ew extends EventClassTypeArr,
+    Er extends EventClassTypeArr
+  >(
+    query: Partial<QueryParams<C, W, Wo, R, Ew, Er>>
+  ): QueryResults<C, R, Ew, Er> {
     const fullQuery = {
       ...defaultQueryParams,
       ...query,
@@ -159,10 +167,16 @@ export class Query {
 
     const componentResult: ComponentResults<C> = [];
 
-    let eventWriters: EventInstanceTuple<Ew> = [];
+    let eventWriters: EventWriterInstanceTuple<Ew> = [];
 
     if (query.eventWriter) {
       eventWriters = query.eventWriter(this.ecs);
+    }
+
+    let eventReaders: EventReaderInstanceTuple<Er> = [];
+
+    if (query.eventReader) {
+      eventReaders = query.eventReader(this.ecs);
     }
 
     for (let i = 0; i < this.ecs.allocator.entities.length; i++) {
@@ -244,7 +258,8 @@ export class Query {
       components: componentResult,
       resources: resources,
       commands: this.ecs.commands,
-      eventWriters: eventWriters,
-    } as QueryResults<C, R, Ew>;
+      eventWriters,
+      eventReaders,
+    } as QueryResults<C, R, Ew, Er>;
   }
 }
