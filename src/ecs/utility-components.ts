@@ -1,4 +1,5 @@
 export abstract class EmptyComponent {}
+export abstract class TagComponent {}
 
 export abstract class ValueComponent<T> {
   public value: T;

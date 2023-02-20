@@ -7,6 +7,7 @@ import * as NewQuery from "./newquery";
 import { Commands } from "./commands";
 import { Plugin } from "./plugin";
 import { EventMap, Event } from "./events";
+import { EntityBuilder } from "./entity-builder";
 import * as NewSystem from "./newsystem";
 
 export class ComponentListMap {
@@ -44,41 +45,6 @@ export class ComponentListMap {
 
   public get maps(): Map<string, ComponentList<unknown>> {
     return this.componentListMap;
-  }
-}
-
-export class EntityBuilder {
-  private entity: Entity;
-  private ecs: Ecs;
-
-  constructor(ecs: Ecs, entity: Entity) {
-    this.ecs = ecs;
-    this.entity = entity;
-  }
-
-  public insert<T>(component: T): EntityBuilder;
-  public insert<T>(component: T[]): EntityBuilder;
-  public insert<T>(component: T[] | T): EntityBuilder {
-    const components: T[] = Array.isArray(component) ? component : [component];
-
-    for (const comp of components) {
-      this.ecs.insertComponentForEntity(this.entity, comp);
-    }
-
-    return this;
-  }
-
-  public remove<T>(component: T): EntityBuilder {
-    this.ecs.remove(this.entity, component);
-    return this;
-  }
-
-  public destroy(): boolean {
-    return this.ecs.destroyEntity(this.entity);
-  }
-
-  public kill(): boolean {
-    return this.ecs.killEntity(this.entity);
   }
 }
 

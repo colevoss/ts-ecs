@@ -1,4 +1,5 @@
-import { Ecs, EntityBuilder } from "./ecs";
+import { Ecs } from "./ecs";
+import { EntityBuilder } from "./entity-builder";
 import { Entity } from "./entity";
 
 export class Commands {

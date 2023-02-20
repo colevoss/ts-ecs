@@ -8,3 +8,4 @@ export * from "./time";
 export * from "./timer";
 export * from "./events";
 export * from "./plugin";
+export * from "./builtin";

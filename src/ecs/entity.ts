@@ -46,11 +46,11 @@ export class EntityAllocator {
     }
 
     const index = this.entities.length;
-    const allocator = new Entity(index);
+    const entity = new Entity(index);
 
-    this.entities.push(allocator);
+    this.entities.push(entity);
 
-    return allocator;
+    return entity;
   }
 
   public dealloc(entity: Entity): boolean {
