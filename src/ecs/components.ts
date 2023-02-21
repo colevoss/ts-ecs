@@ -27,7 +27,7 @@ export class ComponentEntry<T> {
 }
 
 export class ComponentList<T> {
-  components: (ComponentEntry<T> | undefined)[] = [];
+  private components: (ComponentEntry<T> | undefined)[] = [];
 
   public set(entity: Entity, value: T): ComponentEntry<T> {
     const component = new ComponentEntry<T>(entity.generation, value);
@@ -70,8 +70,6 @@ export class ComponentList<T> {
   }
 }
 
-// export abstract class CComponent {}
-
 export function Component(name?: string) {
   return <T extends Constructor>(superClass: T) => {
     const ComponentClass = class extends superClass implements IComponent {
@@ -110,4 +108,42 @@ export function bundle<T>() {
 
     return components as ComponentBundleResult<T>;
   };
+}
+
+export class ComponentListMap {
+  private componentListMap: Map<string, ComponentList<unknown>> = new Map();
+
+  public getOrCreate<T>(t: unknown): ComponentList<T> | null {
+    // @ts-ignore
+    const componentName = getComponentName(t);
+
+    if (!componentName) {
+      throw new Error(`Not a component ${t}`);
+    }
+
+    if (!this.componentListMap.has(componentName)) {
+      const componentList = new ComponentList<T>();
+      this.componentListMap.set(componentName, componentList);
+      return componentList;
+    }
+
+    return this.componentListMap.get(componentName) as ComponentList<T>;
+  }
+
+  public get<T>(t: unknown): ComponentList<T> | null {
+    // @ts-ignore
+    const componentName = getComponentName(t);
+
+    if (!componentName) {
+      throw new Error(`Not a component ${t}`);
+    }
+
+    return (
+      (this.componentListMap.get(componentName) as ComponentList<T>) || null
+    );
+  }
+
+  public get maps(): Map<string, ComponentList<unknown>> {
+    return this.componentListMap;
+  }
 }

@@ -1,12 +1,11 @@
-import { Ecs, Plugin, system } from "./ecs";
-import { LazySystem } from "./ecs/newsystem";
+import { Ecs, Plugin } from "./ecs";
+import { LazySystem } from "./ecs/system";
 
 export class StatsPlugin implements Plugin {
   public build(ecs: Ecs): void {
     const stats = new Stats();
     ecs.registerResource(stats);
-    // ecs.addSystem(statSystem);
-    ecs.newAddSystem(statSystem);
+    ecs.addSystem(statSystem);
     stats.startStats();
 
     setInterval(() => {

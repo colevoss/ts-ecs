@@ -284,7 +284,8 @@ export abstract class Event<M = undefined> {
   private static readers: Map<number, eventReader<Event<unknown>>> = new Map();
   private static readerCount: number = 0;
 
-  private static subscribers: Set<eventSubscriber<Event<unknown>>> = new Set();
+  // private static subscribers: Set<eventSubscriber<Event<unknown>>> = new Set();
+  public static subscribers: Set<eventSubscriber<Event<unknown>>> = new Set();
 
   public static registerSubscriber(
     subscriber: eventSubscriber<Event<unknown>>

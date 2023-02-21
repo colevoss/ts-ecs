@@ -53,6 +53,16 @@ export class EntityAllocator {
     return entity;
   }
 
+  public getById(id: number): Entity | undefined {
+    const entity = this.entities[id];
+
+    if (!entity || !entity.isLive) {
+      return;
+    }
+
+    return entity;
+  }
+
   public dealloc(entity: Entity): boolean {
     const entry = this.entities[entity.index];
 

@@ -1,13 +1,14 @@
 import * as T from "three";
 import {
   Ecs,
-  eagerSystem,
-  system,
-  entitySystem,
   Time,
   Event,
   EventWriter,
   EventReader,
+  Component,
+  Parent,
+  Child,
+  StringComponent,
 } from "../ecs";
 import { Player } from "./player";
 import { FpsScene } from "./scene";
@@ -21,7 +22,7 @@ import {
 } from "./projectile";
 import { Vector3 } from "three";
 import { StatsPlugin } from "../stats";
-import { EagerSystem, LazySystem, EntitySystem } from "../ecs/newsystem";
+import { EagerSystem, LazySystem, EntitySystem } from "../ecs/system";
 
 export class MyEvent extends Event<string> {}
 export class ShootEvent extends Event {}
@@ -290,69 +291,92 @@ const othertestEventReaderSystem = LazySystem.init(
   }
 );
 
+@Component()
+class TestParent {}
+
+@Component()
+class TestChild extends StringComponent {}
+
+const testParentChildSetupSystem = LazySystem.init({}, ({ commands }) => {
+  for (let i = 0; i < 3; i++) {
+    const parent = commands.spawn().insert(new TestParent());
+    const child = commands.spawn().insert(new TestChild("child " + i));
+    parent.addChild(child.entity);
+  }
+});
+
+const testParentSystem = EagerSystem.init(
+  { has: [Child], with: [TestParent] },
+  function ({ components, commands, query }) {
+    for (const [e, child] of components) {
+      for (const entity of commands.getChildEntities(child)) {
+        const results = query.queryEntity(entity, { has: [TestChild] });
+        if (!results) return;
+
+        const [e, testChild] = results;
+        console.log(testChild.value, e);
+      }
+    }
+  }
+);
+
+const tcQuery = { has: [Parent], with: [TestChild] };
+
+const testChildSystem = EagerSystem.init(
+  tcQuery,
+  ({ components, commands }) => {
+    for (const [, parent] of components) {
+      const parentEntity = commands.getParentEntity(parent);
+      console.log("PARENT", parent, parentEntity);
+    }
+  }
+);
+
 export const World = new Ecs();
 
 export default function main() {
-  // const world = new Ecs();
   const scene = new FpsScene();
   const player = new Player(scene);
   const time = new Time();
 
-  // gameplay.enable();
-
   function renderWorld() {
-    // world.tick();
-    World.newTick();
+    World.tick();
     requestAnimationFrame(renderWorld);
   }
 
   World.registerEvent(new MyEvent());
   World.registerEvent(new ShootEvent());
-  // world.addStartupSystem(sceneSetupSystem);
-  // world.addStartupSystem(spawnPlayerSystem);
-  World.newAddStartupSystem(sceneSetupSystem);
-  World.newAddStartupSystem(spawnPlayerSystem);
+
+  World.addStartupSystem(sceneSetupSystem);
+  World.addStartupSystem(spawnPlayerSystem);
 
   World.registerResource(time);
   World.registerResource(scene);
   World.registerResource(player);
 
-  // world.addSystem(timeSystem);
-  // world.addSystem(timeSystem);
-  // world.addSystem(moveSystem);
-  // world.addSystem(lookSystem);
-  // world.addSystem(shootSystem);
-  // world.addSystem(spawnProjectileSystem);
+  World.addSystem(timeSystem);
+  World.addSystem(moveSystem);
+  World.addSystem(lookSystem);
+  World.addSystem(shootSystem);
+  World.addSystem(spawnProjectileSystem);
 
-  World.newAddSystem(timeSystem);
-  World.newAddSystem(moveSystem);
-  World.newAddSystem(lookSystem);
-  World.newAddSystem(shootSystem);
-  World.newAddSystem(spawnProjectileSystem);
+  World.addSystem(testEventSystem);
+  World.addSystem(testEventReaderSystem);
+  World.addSystem(othertestEventReaderSystem);
 
-  // world.addSystem(testEventSystem);
-  // world.addSystem(testEventReaderSystem);
-  // world.addSystem(othertestEventReaderSystem);
-  World.newAddSystem(testEventSystem);
-  World.newAddSystem(testEventReaderSystem);
-  World.newAddSystem(othertestEventReaderSystem);
+  World.addSystem(moveProjectileSystem);
+  World.addSystem(expireProjectileSystem);
+  World.addSystem(despawnProjectileSystem);
+  World.addSystem(testPauseSystem);
 
-  // world.addSystem(moveProjectileSystem);
-  // world.addSystem(expireProjectileSystem);
-  // world.addSystem(despawnProjectileSystem);
-  // world.addSystem(testPauseSystem);
-
-  World.newAddSystem(moveProjectileSystem);
-  World.newAddSystem(expireProjectileSystem);
-  World.newAddSystem(despawnProjectileSystem);
-  World.newAddSystem(testPauseSystem);
+  World.addStartupSystem(testParentChildSetupSystem);
+  World.addStartupSystem(testParentSystem);
+  World.addStartupSystem(testChildSystem);
 
   World.resisterPlugin(new StatsPlugin());
 
   // Should be last
-  // world.addSystem(renderSystem);
-  World.newAddSystem(renderSystem);
+  World.addSystem(renderSystem);
 
-  // world.run(renderWorld);
-  World.newRun(renderWorld);
+  World.run(renderWorld);
 }

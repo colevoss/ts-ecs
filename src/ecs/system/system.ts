@@ -5,7 +5,7 @@ import {
   ComponentTypeTuple,
   PartialQueryParams,
   ResourceQuery,
-} from "../newquery";
+} from "../query";
 import {
   EagerSystemHandler,
   LazySystemQuery,
@@ -76,7 +76,7 @@ export class EagerSystem<
   }
 
   public run(ecs: Ecs) {
-    const results = ecs.newQuery.run(this.query);
+    const results = ecs.query.run(this.query);
     return this.handler(results);
   }
 
@@ -117,13 +117,13 @@ export class LazySystem<
     // const { commands, resources, eventWriters, eventReaders } =
     //   ecs.newQuery.run(this.query);
 
-    const results = ecs.newQuery.run(this.query);
+    const results = ecs.query.run(this.query);
 
     this.handler({
       resources: results.resources,
       eventWriters: results.eventWriters,
       eventReaders: results.eventReaders,
-      query: ecs.newQuery,
+      query: ecs.query,
       commands: ecs.commands,
     });
   }
@@ -167,9 +167,9 @@ export class EntitySystem<
   }
 
   public run(ecs: Ecs): void {
-    const queryResults = ecs.newQuery.run(this.resQuery);
+    const queryResults = ecs.query.run(this.resQuery);
 
-    ecs.newQuery.componentQuery(this.componentQuery, (components) => {
+    ecs.query.componentQuery(this.componentQuery, (components) => {
       this.handler(components, queryResults);
     });
   }

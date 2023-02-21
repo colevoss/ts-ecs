@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import { World } from "../fps-test";
-import { ComponentTypeTuple, QueryParams } from "../ecs/newquery";
+import { ComponentTypeTuple, QueryParams } from "../ecs/query";
 import { EventClassTypeArr } from "../ecs/events";
 
 export const WorldContext = createContext(World);
@@ -19,5 +19,5 @@ export function useQuery<
 >(query: Partial<QueryParams<H, W, Wo, R, Ew, Er>>) {
   const world = useWorld();
 
-  return world.newQuery.run(query);
+  return world.query.run(query);
 }

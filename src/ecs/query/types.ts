@@ -119,7 +119,8 @@ export type BaseQueryResults<
   ResourceQueryResults<R> &
   EventWriterQueryResults<Ew> &
   EventReaderQueryResults<Er> &
-  CommandQueryResults;
+  CommandQueryResults &
+  QueryQueryResults;
 
 export type EagerQueryResults<
   H extends ComponentTypeTuple,

@@ -1,4 +1,5 @@
 import { Ecs } from "../ecs";
+import { Entity } from "../entity";
 import {
   EventClassTypeArr,
   EventReaderInstanceTuple,
@@ -45,6 +46,7 @@ export class Query {
       eventReaders,
       components,
       commands: this.ecs.commands,
+      query: this,
     };
   }
 
@@ -96,6 +98,82 @@ export class Query {
     });
 
     return entities;
+  }
+
+  public queryEntity<
+    H extends ComponentTypeTuple,
+    W extends ComponentTypeTuple,
+    Wo extends ComponentTypeTuple
+  >(
+    entity: Entity,
+    query: Partial<ComponentQuery<H, W, Wo>>
+  ): ComponentResult<H> | false {
+    if (!entity.isLive) {
+      return false;
+    }
+
+    const components = [entity] as ComponentResult<H>;
+
+    let doesMatch = true;
+
+    if (query.without) {
+      for (let i = 0; i < query.without.length; i++) {
+        const withoutQueryComponent = query.without[i];
+        const list = this.ecs.componentListMap.get<
+          typeof withoutQueryComponent
+        >(withoutQueryComponent);
+
+        if (!list) {
+          continue;
+        }
+
+        doesMatch = !list.has(entity);
+      }
+
+      if (!doesMatch) {
+        return false;
+      }
+    }
+
+    if (query.with) {
+      for (let i = 0; i < query.with.length; i++) {
+        const component = query.with[i];
+        const list = this.ecs.componentListMap.get<typeof component>(component);
+
+        // Cannot match if the component list does not exist
+        // Cannot match if the entity does not have component
+        if (!list || !list.has(entity)) {
+          return false;
+        }
+      }
+    }
+
+    if (query.has) {
+      for (let i = 0; i < query.has.length; i++) {
+        const hasComponent = query.has[i];
+        const list = this.ecs.componentListMap.get(hasComponent);
+
+        if (!list) {
+          doesMatch = false;
+          continue;
+        }
+
+        const component = list.get(entity);
+
+        if (!component) {
+          doesMatch = false;
+        } else {
+          // @ts-ignore
+          components.push(component as InstanceType<typeof hasComponent>);
+        }
+      }
+
+      if (!doesMatch) {
+        return false;
+      }
+    }
+
+    return components;
   }
 
   public componentQuery<

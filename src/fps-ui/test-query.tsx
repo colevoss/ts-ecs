@@ -1,8 +1,7 @@
-import React, { useSyncExternalStore } from "react";
 import { Ecs } from "../ecs";
 // import { eventStore } from "./test-store";
 import { EventSubscriber } from "../ecs/events";
-import { MyEvent, ShootEvent } from "../fps-test";
+import { ShootEvent } from "../fps-test";
 import { Projectile } from "../fps-test/projectile";
 import { useEventStore, EventStore } from "./store";
 
@@ -13,7 +12,7 @@ class TestStore extends EventStore<number[]> {
     const [sub] = EventSubscriber(ShootEvent)(ecs);
 
     sub.handler((message) => {
-      const { components } = ecs.newQuery.run({ has: [Projectile] });
+      const { components } = ecs.query.run({ has: [Projectile] });
       this.messages = components.map(([entity]) => {
         return entity.index;
       });

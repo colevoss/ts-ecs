@@ -1,52 +1,12 @@
-import { ComponentList, Constructor, getComponentName } from "./components";
+import { ComponentListMap, Constructor } from "./components";
 import { Entity, EntityAllocator } from "./entity";
-import { SystemRunner } from "./system";
 import { ResourceContainer } from "./resource";
 import { Query } from "./query";
-import * as NewQuery from "./newquery";
 import { Commands } from "./commands";
 import { Plugin } from "./plugin";
 import { EventMap, Event } from "./events";
 import { EntityBuilder } from "./entity-builder";
-import * as NewSystem from "./newsystem";
-
-export class ComponentListMap {
-  private componentListMap: Map<string, ComponentList<unknown>> = new Map();
-
-  public getOrCreate<T>(t: unknown): ComponentList<T> | null {
-    // @ts-ignore
-    const componentName = getComponentName(t);
-
-    if (!componentName) {
-      throw new Error(`Not a component ${t}`);
-    }
-
-    if (!this.componentListMap.has(componentName)) {
-      const componentList = new ComponentList<T>();
-      this.componentListMap.set(componentName, componentList);
-      return componentList;
-    }
-
-    return this.componentListMap.get(componentName) as ComponentList<T>;
-  }
-
-  public get<T>(t: unknown): ComponentList<T> | null {
-    // @ts-ignore
-    const componentName = getComponentName(t);
-
-    if (!componentName) {
-      throw new Error(`Not a component ${t}`);
-    }
-
-    return (
-      (this.componentListMap.get(componentName) as ComponentList<T>) || null
-    );
-  }
-
-  public get maps(): Map<string, ComponentList<unknown>> {
-    return this.componentListMap;
-  }
-}
+import { SystemRunnable, SystemRunner } from "./system";
 
 export class Ecs {
   public allocator: EntityAllocator;
@@ -54,30 +14,25 @@ export class Ecs {
 
   public eventMap: EventMap;
 
-  private systems: SystemRunner[] = [];
-  private startupSystems: SystemRunner[] = [];
   private plugins: Plugin[] = [];
 
   public resources: ResourceContainer;
   public commands: Commands;
   public query: Query;
-  public newQuery: NewQuery.Query;
 
-  public systemsRunner: NewSystem.SystemRunner;
-  public startupSystemRunner: NewSystem.SystemRunner;
+  public systemsRunner: SystemRunner;
+  public startupSystemRunner: SystemRunner;
 
   constructor() {
     this.allocator = new EntityAllocator();
     this.componentListMap = new ComponentListMap();
     this.resources = new ResourceContainer();
     this.commands = new Commands(this);
-    this.query = new Query(this);
     this.eventMap = new EventMap();
 
-    // NEW
-    this.newQuery = new NewQuery.Query(this);
-    this.startupSystemRunner = new NewSystem.SystemRunner();
-    this.systemsRunner = new NewSystem.SystemRunner();
+    this.query = new Query(this);
+    this.startupSystemRunner = new SystemRunner();
+    this.systemsRunner = new SystemRunner();
   }
 
   public registerEvent<M>(eventType: Event<M>) {
@@ -100,24 +55,12 @@ export class Ecs {
     return this;
   }
 
-  public run<T extends (...args: any[]) => void>(cb: T) {
-    // this.timer.run();
-
-    for (let i = 0; i < this.plugins.length; i++) {
-      this.plugins[i].build(this);
-    }
-
-    for (let i = 0; i < this.startupSystems.length; i++) {
-      this.startupSystems[i](this);
-    }
-
-    // this.timer.reset();
-
-    cb();
-  }
-
   public entity(entity: Entity) {
     return new EntityBuilder(this, entity);
+  }
+
+  public getEntityById(id: number) {
+    return this.allocator.getById(id);
   }
 
   public insertComponentForEntity<T>(entity: Entity, component: T) {
@@ -131,22 +74,17 @@ export class Ecs {
     return entityBuilder;
   }
 
-  public addSystem(system: SystemRunner) {
-    this.systems.push(system);
-    return this;
-  }
-
-  public newAddSystem(system: NewSystem.SystemRunnable): this {
+  public addSystem(system: SystemRunnable): this {
     this.systemsRunner.addSystem(system);
     return this;
   }
 
-  public newAddStartupSystem(system: NewSystem.SystemRunnable): this {
+  public addStartupSystem(system: SystemRunnable): this {
     this.startupSystemRunner.addSystem(system);
     return this;
   }
 
-  public newRun(cb: (...args: any[]) => void): this {
+  public run(cb: (...args: any[]) => void): this {
     this.buildPlugins();
 
     this.startupSystemRunner.run(this);
@@ -155,20 +93,8 @@ export class Ecs {
     return this;
   }
 
-  public newTick() {
-    this.systemsRunner.run(this);
-  }
-
-  public addStartupSystem(system: SystemRunner) {
-    this.startupSystems.push(system);
-  }
-
   public tick() {
-    // this.timer.tick(t);
-
-    for (let i = 0; i < this.systems.length; i++) {
-      this.systems[i](this);
-    }
+    this.systemsRunner.run(this);
   }
 
   public remove<C>(entity: Entity, component: C): boolean {

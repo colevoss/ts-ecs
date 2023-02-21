@@ -3,7 +3,7 @@ import { Entity } from "../entity";
 
 @Component()
 export class Child {
-  private childIndecies: Set<number> = new Set();
+  public readonly childIndecies: Set<number> = new Set();
 
   constructor() {}
 
@@ -18,19 +18,25 @@ export class Child {
 
 @Component()
 export class Parent {
-  private parentIndex?: number;
+  private parentIndex: number;
 
-  constructor() {}
-
-  public addParent(entity: Entity) {
-    this.parentIndex = entity.index;
+  constructor(parentIndex: number) {
+    this.parentIndex = parentIndex;
   }
+
+  // public addParent(entity: Entity) {
+  //   this.parentIndex = entity.index;
+  // }
 
   public removeParent(entity: Entity) {
     if (entity.index !== this.parentIndex) {
       return;
     }
 
-    this.parentIndex = undefined;
+    // this.parentIndex = undefined;
+  }
+
+  public get parentEntityId(): number {
+    return this.parentIndex;
   }
 }

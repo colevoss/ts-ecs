@@ -11,7 +11,7 @@ import {
   LazyQueryResults,
   ResourceQuery,
   ResourceQueryResults,
-} from "../newquery";
+} from "../query";
 import { SystemLabel } from "./system";
 
 export type EagerSystemHandler<

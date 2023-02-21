@@ -3,7 +3,8 @@ import { Child, Parent } from "./builtin";
 import { Entity } from "./entity";
 
 export class EntityBuilder {
-  private entity: Entity;
+  // private entity: Entity;
+  public entity: Entity;
   private ecs: Ecs;
 
   constructor(ecs: Ecs, entity: Entity) {
@@ -53,8 +54,8 @@ export class EntityBuilder {
     childComponent.addChild(entity);
     this.ecs.insertComponentForEntity(this.entity, childComponent);
 
-    const parentComponent = new Parent();
-    parentComponent.addParent(this.entity);
+    const parentComponent = new Parent(this.entity.index);
+    // parentComponent.addParent(this.entity);
     this.ecs.insertComponentForEntity(entity, parentComponent);
 
     return this;
