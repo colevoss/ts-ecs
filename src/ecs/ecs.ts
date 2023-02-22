@@ -2,11 +2,12 @@ import { ComponentListMap, Constructor } from "./components";
 import { Entity, EntityAllocator } from "./entity";
 import { ResourceContainer } from "./resource";
 import { Query } from "./query";
-import { Commands } from "./commands";
+// import { Commands } from "./commands";
 import { Plugin } from "./plugin";
 import { EntityBuilder } from "./entity-builder";
 import { SystemRunnable, SystemRunner } from "./system";
 import { Event, EventMap, EventSubscriber } from "./event";
+import { Commands } from "./commands";
 
 export class Ecs {
   public allocator: EntityAllocator;
@@ -21,6 +22,7 @@ export class Ecs {
   public query: Query;
 
   public systemsRunner: SystemRunner;
+  public lateSystemRunner: SystemRunner;
   public startupSystemRunner: SystemRunner;
 
   constructor() {
@@ -31,13 +33,19 @@ export class Ecs {
 
     this.query = new Query(this);
     this.startupSystemRunner = new SystemRunner();
+    this.lateSystemRunner = new SystemRunner();
     this.systemsRunner = new SystemRunner();
 
     this.eventMap = new EventMap();
   }
 
-  public registerEvent<M>(eventType: Event<M>) {
+  public update() {
+    this.commands.execute(this);
+  }
+
+  public registerEvent<M>(eventType: Event<M>): this {
     this.eventMap.registerEvent(eventType);
+    return this;
   }
 
   public eventSubscriber<M>(
@@ -54,8 +62,9 @@ export class Ecs {
     return event.generateSubscriber();
   }
 
-  public registerResource<T extends Constructor>(t: InstanceType<T>) {
+  public registerResource<T extends Constructor>(t: InstanceType<T>): this {
     this.resources.set(t);
+    return this;
   }
 
   public resisterPlugin<P extends Plugin>(plugin: P): Ecs {
@@ -95,6 +104,12 @@ export class Ecs {
     return this;
   }
 
+  public addLateSystem(system: SystemRunnable): this {
+    system.registerInWorld(this);
+    this.lateSystemRunner.addSystem(system);
+    return this;
+  }
+
   public addStartupSystem(system: SystemRunnable): this {
     this.startupSystemRunner.addSystem(system);
     return this;
@@ -105,12 +120,18 @@ export class Ecs {
 
     this.startupSystemRunner.run(this);
 
+    this.update();
+
     cb();
     return this;
   }
 
   public tick() {
     this.systemsRunner.run(this);
+    this.update();
+
+    this.lateSystemRunner.run(this);
+    this.update();
   }
 
   public remove<C>(entity: Entity, component: C): boolean {

@@ -20,8 +20,8 @@ export class Child {
 export class Parent {
   private parentIndex: number;
 
-  constructor(parentIndex: number) {
-    this.parentIndex = parentIndex;
+  constructor(parent: Entity) {
+    this.parentIndex = parent.index;
   }
 
   // public addParent(entity: Entity) {

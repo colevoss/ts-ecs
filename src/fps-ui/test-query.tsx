@@ -1,6 +1,5 @@
-import { Ecs, eventSubscriber } from "../ecs";
-// import { eventStore } from "./test-store";
-import { ShootEvent, MyEvent } from "../fps-test";
+import { Ecs } from "../ecs";
+import { ShootEvent } from "../fps-test";
 import { Projectile } from "../fps-test/projectile";
 import { useEventStore, EventStore } from "./store";
 

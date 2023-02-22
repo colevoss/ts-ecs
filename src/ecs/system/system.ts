@@ -8,25 +8,13 @@ import {
   PartialQueryParams,
   ResourceQuery,
 } from "../query";
+import { newSystemLabel, SystemLabel } from "./system-label";
 import {
   SystemHandler,
   SystemRunnable,
   EntitySystemQuery,
   EntitySystemHandler,
 } from "./types";
-
-export type SystemLabel = string;
-
-export function Systemlabel(label: string): SystemLabel {
-  return label;
-}
-
-let SYSTEM_LABEL = 0;
-function newSystemLabel() {
-  const systemLabel = SYSTEM_LABEL.toString();
-  SYSTEM_LABEL += 1;
-  return systemLabel;
-}
 
 export abstract class ISystem implements SystemRunnable {
   private systemLabel: SystemLabel;

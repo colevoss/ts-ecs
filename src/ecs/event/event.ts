@@ -22,13 +22,12 @@ export type EventSubscriberHandler<E extends Event<unknown>> = (
 
 export abstract class Event<M> {
   private readers: Set<EventReader<M>> = new Set();
-  // private handlers: EventSubscriberHandler<M>[] = [];
   private subscrbers: Set<EventSubscriber<M>> = new Set();
 
   public send(message: M) {
-    // for (const handler of this.handlers) {
-    //   handler(message);
-    // }
+    for (const handler of this.subscrbers) {
+      handler.send(message);
+    }
 
     this.readers.forEach((reader) => reader.send(message));
   }

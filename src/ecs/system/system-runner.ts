@@ -12,7 +12,7 @@ export class SystemRunner implements SystemRunnable {
     return this;
   }
 
-  public registerInWorld(ecs: Ecs): void {}
+  public registerInWorld(): void {}
 
   public getLabel(): string {
     return "no label";

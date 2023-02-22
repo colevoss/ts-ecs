@@ -24,7 +24,6 @@ import { StatsPlugin } from "../stats";
 
 export class MyEvent extends Event<string> {}
 export class ShootEvent extends Event<null> {}
-// export class ShootEvent extends EmptyEvent {}
 
 function degToRad(deg: number): number {
   return deg * (Math.PI / 180);
@@ -142,13 +141,13 @@ const shootSystem = System.init(
 
     // commands.spawn().insert(new Projectile()).insert(new Fire(20));
     // commands.spawn().insert([new Projectile(), new Fire(20)]);
-    commands.spawn(
-      ShootBundle({
-        projectile: new Projectile(),
-        // fire: new Fire(20),
-        fire: new Fire(20),
-      })
-    );
+    const bundle = ShootBundle({
+      projectile: new Projectile(),
+      // fire: new Fire(20),
+      fire: new Fire(20),
+    });
+
+    commands.spawn(bundle);
 
     player.shotsFired += 1;
   }
@@ -297,19 +296,21 @@ class TestParent {}
 class TestChild extends StringComponent {}
 
 const testParentChildSetupSystem = System.init({}, ({ commands }) => {
-  for (let i = 0; i < 3; i++) {
-    const parent = commands.spawn().insert(new TestParent());
-    const child = commands.spawn().insert(new TestChild("child " + i));
-    parent.addChild(child.entity);
+  for (let i = 0; i < 1; i++) {
+    commands.spawn(new TestParent()).withChildren((parent) => {
+      parent.spawn().insert(new TestChild("child " + i));
+    });
   }
 });
 
 const testParentSystem = System.init(
   { has: [Child], with: [TestParent] },
   function ({ components, commands, query }) {
-    for (const [, child] of components) {
-      for (const entity of commands.getChildEntities(child)) {
-        const results = query.queryEntity(entity, { has: [TestChild] });
+    // console.log(components);
+    for (const [e, child] of components) {
+      // console.log(child);
+      for (const entity of commands.entity(e).getChildEntities(child)) {
+        const results = query.queryEntity(entity.id(), { has: [TestChild] });
         if (!results) continue;
 
         const [e, testChild] = results;
@@ -322,9 +323,10 @@ const testParentSystem = System.init(
 const tcQuery = { has: [Parent], with: [TestChild] };
 
 const testChildSystem = System.init(tcQuery, ({ components, commands }) => {
-  for (const [, parent] of components) {
-    const parentEntity = commands.getParentEntity(parent);
-    console.log("PARENT", parent, parentEntity);
+  for (const [e, parent] of components) {
+    // console.log(parent);
+    const parentEntity = commands.entity(e).getParentEntity(parent);
+    // console.log("PARENT", parentEntity?.id());
   }
 });
 
@@ -353,21 +355,23 @@ export default function main() {
   World.addSystem(timeSystem);
   World.addSystem(moveSystem);
   World.addSystem(lookSystem);
+
   World.addSystem(shootSystem);
-  World.addSystem(spawnProjectileSystem);
+  World.addSystem(moveProjectileSystem);
+
+  World.addLateSystem(spawnProjectileSystem);
+  World.addLateSystem(expireProjectileSystem);
 
   World.addSystem(testEventSystem);
   World.addSystem(testEventReaderSystem);
   World.addSystem(othertestEventReaderSystem);
 
-  World.addSystem(moveProjectileSystem);
-  World.addSystem(expireProjectileSystem);
   World.addSystem(despawnProjectileSystem);
   World.addSystem(testPauseSystem);
 
-  World.addStartupSystem(testParentChildSetupSystem);
-  World.addStartupSystem(testParentSystem);
-  World.addStartupSystem(testChildSystem);
+  // World.addStartupSystem(testParentChildSetupSystem);
+  // World.addSystem(testParentSystem);
+  // World.addSystem(testChildSystem);
 
   World.resisterPlugin(new StatsPlugin());
 
