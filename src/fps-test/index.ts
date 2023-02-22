@@ -3,12 +3,12 @@ import {
   Ecs,
   Time,
   Event,
-  EventWriter,
-  EventReader,
   Component,
   Parent,
   Child,
   StringComponent,
+  System,
+  EntitySystem,
 } from "../ecs";
 import { Player } from "./player";
 import { FpsScene } from "./scene";
@@ -20,12 +20,11 @@ import {
   ExpiredProjectile,
   ShootBundle,
 } from "./projectile";
-import { Vector3 } from "three";
 import { StatsPlugin } from "../stats";
-import { EagerSystem, LazySystem, EntitySystem } from "../ecs/system";
 
 export class MyEvent extends Event<string> {}
-export class ShootEvent extends Event {}
+export class ShootEvent extends Event<null> {}
+// export class ShootEvent extends EmptyEvent {}
 
 function degToRad(deg: number): number {
   return deg * (Math.PI / 180);
@@ -52,7 +51,7 @@ class Floor extends T.Object3D {
   }
 }
 
-const lookSystem = LazySystem.init(
+const lookSystem = System.init(
   { res: [Player, FpsScene, Time] },
   function lazyLook({ resources }) {
     const [player, scene, time] = resources;
@@ -69,7 +68,7 @@ const lookSystem = LazySystem.init(
   }
 ).label("look");
 
-const moveSystem = LazySystem.init(
+const moveSystem = System.init(
   { res: [Player, FpsScene, Time] },
   function move({ resources }) {
     const [player, scene, time] = resources;
@@ -84,7 +83,7 @@ const moveSystem = LazySystem.init(
   }
 ).label("move");
 
-const renderSystem = LazySystem.init(
+const renderSystem = System.init(
   { res: [FpsScene, Player] },
   function lazyRender({ resources }) {
     const [scene, player] = resources;
@@ -92,7 +91,7 @@ const renderSystem = LazySystem.init(
   }
 ).label("render");
 
-const sceneSetupSystem = LazySystem.init(
+const sceneSetupSystem = System.init(
   { res: [FpsScene, Time] },
   function setupScene({ resources }) {
     const [scene, time] = resources;
@@ -109,7 +108,7 @@ const sceneSetupSystem = LazySystem.init(
   }
 ).label("sceneSetup");
 
-const spawnPlayerSystem = EagerSystem.init(
+const spawnPlayerSystem = System.init(
   { res: [FpsScene, Player] },
   function spawnPlayer({ resources, commands }) {
     const [scene, player] = resources;
@@ -119,8 +118,8 @@ const spawnPlayerSystem = EagerSystem.init(
   }
 );
 
-const shootSystem = LazySystem.init(
-  { res: [FpsScene, Player], eventWriter: EventWriter(ShootEvent) },
+const shootSystem = System.init(
+  { res: [FpsScene, Player], eventWriter: [ShootEvent] },
   function shoot({ resources, commands, query, eventWriters }) {
     const [scene, player] = resources;
 
@@ -137,7 +136,7 @@ const shootSystem = LazySystem.init(
       return;
     }
 
-    shootEvent.send(undefined);
+    shootEvent.send(null);
 
     projectileManager.shoot();
 
@@ -155,7 +154,7 @@ const shootSystem = LazySystem.init(
   }
 );
 
-const spawnProjectileSystem = EagerSystem.init(
+const spawnProjectileSystem = System.init(
   { has: [Projectile, Fire], res: [Player, FpsScene, Time] },
   function spawnProjectile({ components, resources, commands }) {
     if (components.length === 0) {
@@ -163,7 +162,7 @@ const spawnProjectileSystem = EagerSystem.init(
     }
 
     const [player, scene, time] = resources;
-    const v = new Vector3();
+    const v = new T.Vector3();
     const playerLocation = player.getWorldPosition(v);
 
     for (const [entity, projectile, fire] of components) {
@@ -188,7 +187,7 @@ const spawnProjectileSystem = EagerSystem.init(
   }
 );
 
-const expireProjectileSystem = LazySystem.init(
+const expireProjectileSystem = System.init(
   { res: [Time] },
   function expireProjectile({ commands, resources, query }) {
     const [time] = resources;
@@ -217,7 +216,7 @@ const moveProjectileSystem = EntitySystem.init(
   }
 );
 
-const despawnProjectileSystem = LazySystem.init(
+const despawnProjectileSystem = System.init(
   { res: [FpsScene] },
   function lazyDespawnProjectile({ resources, query, commands }) {
     const [scene] = resources;
@@ -232,7 +231,7 @@ const despawnProjectileSystem = LazySystem.init(
   }
 );
 
-const testPauseSystem = LazySystem.init(
+const testPauseSystem = System.init(
   { res: [FpsScene, Time] },
   function pause({ resources }) {
     const [scene, time] = resources;
@@ -245,7 +244,7 @@ const testPauseSystem = LazySystem.init(
   }
 );
 
-const timeSystem = LazySystem.init(
+const timeSystem = System.init(
   { res: [Time] },
   function tickTime({ resources }) {
     const [time] = resources;
@@ -253,8 +252,8 @@ const timeSystem = LazySystem.init(
   }
 );
 
-const testEventSystem = LazySystem.init(
-  { eventWriter: EventWriter(MyEvent), res: [FpsScene, Time] },
+const testEventSystem = System.init(
+  { eventWriter: [MyEvent], res: [FpsScene, Time] },
   ({ eventWriters, resources }) => {
     const [scene, time] = resources;
 
@@ -265,9 +264,9 @@ const testEventSystem = LazySystem.init(
   }
 );
 
-const testEventReaderSystem = LazySystem.init(
+const testEventReaderSystem = System.init(
   {
-    eventReader: EventReader(MyEvent),
+    eventReader: [MyEvent],
   },
   ({ eventReaders }) => {
     const [myEvent] = eventReaders;
@@ -278,9 +277,9 @@ const testEventReaderSystem = LazySystem.init(
   }
 );
 
-const othertestEventReaderSystem = LazySystem.init(
+const othertestEventReaderSystem = System.init(
   {
-    eventReader: EventReader(MyEvent),
+    eventReader: [MyEvent],
   },
   ({ eventReaders }) => {
     const [myEvent] = eventReaders;
@@ -297,7 +296,7 @@ class TestParent {}
 @Component()
 class TestChild extends StringComponent {}
 
-const testParentChildSetupSystem = LazySystem.init({}, ({ commands }) => {
+const testParentChildSetupSystem = System.init({}, ({ commands }) => {
   for (let i = 0; i < 3; i++) {
     const parent = commands.spawn().insert(new TestParent());
     const child = commands.spawn().insert(new TestChild("child " + i));
@@ -305,13 +304,13 @@ const testParentChildSetupSystem = LazySystem.init({}, ({ commands }) => {
   }
 });
 
-const testParentSystem = EagerSystem.init(
+const testParentSystem = System.init(
   { has: [Child], with: [TestParent] },
   function ({ components, commands, query }) {
-    for (const [e, child] of components) {
+    for (const [, child] of components) {
       for (const entity of commands.getChildEntities(child)) {
         const results = query.queryEntity(entity, { has: [TestChild] });
-        if (!results) return;
+        if (!results) continue;
 
         const [e, testChild] = results;
         console.log(testChild.value, e);
@@ -322,15 +321,12 @@ const testParentSystem = EagerSystem.init(
 
 const tcQuery = { has: [Parent], with: [TestChild] };
 
-const testChildSystem = EagerSystem.init(
-  tcQuery,
-  ({ components, commands }) => {
-    for (const [, parent] of components) {
-      const parentEntity = commands.getParentEntity(parent);
-      console.log("PARENT", parent, parentEntity);
-    }
+const testChildSystem = System.init(tcQuery, ({ components, commands }) => {
+  for (const [, parent] of components) {
+    const parentEntity = commands.getParentEntity(parent);
+    console.log("PARENT", parent, parentEntity);
   }
-);
+});
 
 export const World = new Ecs();
 

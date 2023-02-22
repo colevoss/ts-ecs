@@ -2,11 +2,10 @@ import { Commands } from "../commands";
 import { Entity } from "../entity";
 import {
   EventClassTypeArr,
-  EventReaderGenerator,
   EventReaderInstanceTuple,
-  EventWriterGenerator,
+  EventTypeTuple,
   EventWriterInstanceTuple,
-} from "../events";
+} from "../event";
 import { Query } from "./query";
 
 export type ComponentTupleInstances<T extends ComponentTypeTuple> = {
@@ -44,12 +43,19 @@ export type ResourceQuery<R extends ComponentTypeTuple> = {
 };
 
 export type EventWriterQuery<Ew extends EventClassTypeArr> = {
-  eventWriter: EventWriterGenerator<Ew>;
+  eventWriter: EventTypeTuple<Ew>;
 };
 
 export type EventReaderQuery<Er extends EventClassTypeArr> = {
-  eventReader: EventReaderGenerator<Er>;
+  eventReader: EventTypeTuple<Er>;
 };
+
+export type QueryRunParams<
+  H extends ComponentTypeTuple,
+  W extends ComponentTypeTuple,
+  Wo extends ComponentTypeTuple,
+  R extends ComponentTypeTuple
+> = HasQuery<H> & WithQuery<W> & WithoutQuery<Wo> & ResourceQuery<R>;
 
 export type QueryParams<
   H extends ComponentTypeTuple,
@@ -98,8 +104,8 @@ export type EventWriterQueryResults<Ew extends EventClassTypeArr> = {
   eventWriters: EventWriterInstanceTuple<Ew>;
 };
 
-export type EventReaderQueryResults<Er extends EventClassTypeArr> = {
-  eventReaders: EventReaderInstanceTuple<Er>;
+export type EventReaderQueryResults<Ew extends EventClassTypeArr> = {
+  eventReaders: EventReaderInstanceTuple<Ew>;
 };
 
 export type CommandQueryResults = {
@@ -109,6 +115,14 @@ export type CommandQueryResults = {
 export type QueryQueryResults = {
   query: Query;
 };
+
+export type QueryRunResults<
+  H extends ComponentTypeTuple,
+  R extends ComponentTypeTuple
+> = ComponentQueryResults<H> & ResourceQueryResults<R>;
+// ResourceQueryResults<R> &
+// CommandQueryResults &
+// QueryQueryResults;
 
 export type BaseQueryResults<
   H extends ComponentTypeTuple,

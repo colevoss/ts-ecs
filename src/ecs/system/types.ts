@@ -1,6 +1,7 @@
 import { Ecs } from "../ecs";
-import { EventClassTypeArr } from "../events";
+import { EventClassTypeArr } from "../event";
 import {
+  BaseQueryResults,
   CommandQueryResults,
   ComponentQuery,
   ComponentResult,
@@ -8,7 +9,6 @@ import {
   EagerQueryResults,
   EventReaderQuery,
   EventWriterQuery,
-  LazyQueryResults,
   ResourceQuery,
   ResourceQueryResults,
 } from "../query";
@@ -21,17 +21,18 @@ export type EagerSystemHandler<
   Er extends EventClassTypeArr
 > = (results: EagerQueryResults<H, R, Ew, Er>) => void;
 
-export type LazySystemQuery<
+export type SystemQuery<
   R extends ComponentTypeTuple,
   Ew extends EventClassTypeArr,
   Er extends EventClassTypeArr
 > = ResourceQuery<R> & EventWriterQuery<Ew> & EventReaderQuery<Er>;
 
-export type LazySystemHandler<
+export type SystemHandler<
+  H extends ComponentTypeTuple,
   R extends ComponentTypeTuple,
   Ew extends EventClassTypeArr,
   Er extends EventClassTypeArr
-> = (results: LazyQueryResults<R, Ew, Er>) => void;
+> = (results: BaseQueryResults<H, R, Ew, Er>) => void;
 
 export type EntitySystemQuery<
   H extends ComponentTypeTuple,
@@ -53,5 +54,6 @@ export type EntitySystemHandler<
 
 export interface SystemRunnable {
   run(ecs: Ecs): void;
+  registerInWorld(ecs: Ecs): void;
   getLabel(): SystemLabel;
 }

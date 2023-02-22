@@ -4,9 +4,9 @@ import { ResourceContainer } from "./resource";
 import { Query } from "./query";
 import { Commands } from "./commands";
 import { Plugin } from "./plugin";
-import { EventMap, Event } from "./events";
 import { EntityBuilder } from "./entity-builder";
 import { SystemRunnable, SystemRunner } from "./system";
+import { Event, EventMap, EventSubscriber } from "./event";
 
 export class Ecs {
   public allocator: EntityAllocator;
@@ -28,15 +28,30 @@ export class Ecs {
     this.componentListMap = new ComponentListMap();
     this.resources = new ResourceContainer();
     this.commands = new Commands(this);
-    this.eventMap = new EventMap();
 
     this.query = new Query(this);
     this.startupSystemRunner = new SystemRunner();
     this.systemsRunner = new SystemRunner();
+
+    this.eventMap = new EventMap();
   }
 
   public registerEvent<M>(eventType: Event<M>) {
-    this.eventMap.registerEventType(eventType);
+    this.eventMap.registerEvent(eventType);
+  }
+
+  public eventSubscriber<M>(
+    eventType: typeof Event<M>
+    // subscriber: EventSubscriberHandler,
+  ): EventSubscriber<M> {
+    const event = this.eventMap.getEventByType<M>(eventType);
+
+    if (!event) {
+      throw new Error("No event type");
+    }
+
+    // event.registerSubscriber(subscriber);
+    return event.generateSubscriber();
   }
 
   public registerResource<T extends Constructor>(t: InstanceType<T>) {
@@ -75,6 +90,7 @@ export class Ecs {
   }
 
   public addSystem(system: SystemRunnable): this {
+    system.registerInWorld(this);
     this.systemsRunner.addSystem(system);
     return this;
   }

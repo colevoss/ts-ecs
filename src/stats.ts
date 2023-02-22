@@ -1,5 +1,5 @@
 import { Ecs, Plugin } from "./ecs";
-import { LazySystem } from "./ecs/system";
+import { System } from "./ecs/system";
 
 export class StatsPlugin implements Plugin {
   public build(ecs: Ecs): void {
@@ -76,7 +76,7 @@ export class Stats {
   }
 }
 
-const statSystem = LazySystem.init({ res: [Stats] }, ({ resources }) => {
+const statSystem = System.init({ res: [Stats] }, ({ resources }) => {
   const [stats] = resources;
   stats.tick();
 });

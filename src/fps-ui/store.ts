@@ -4,11 +4,29 @@ import { useWorld } from "./world-context";
 
 type EventStoreSubscriber = () => void;
 
+type SetStoreCb<M> = (store: M) => M;
+
 export abstract class EventStore<M> {
   private subscribers: EventStoreSubscriber[] = [];
   private isInitialized: boolean = false;
+  protected store: M;
 
-  abstract getSnapshot(): M;
+  constructor(initialStore: M) {
+    this.store = initialStore;
+  }
+
+  public set(cb: SetStoreCb<M>, shouldEmit: boolean = true): void {
+    this.store = cb(this.store);
+
+    if (shouldEmit) {
+      this.emitChanges();
+    }
+  }
+
+  // abstract getSnapshot(): M;
+  public getSnapshot = (): M => {
+    return this.store;
+  };
 
   public subscribe = (listener: EventStoreSubscriber) => {
     this.subscribers = [...this.subscribers, listener];

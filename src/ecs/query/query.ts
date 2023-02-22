@@ -1,21 +1,14 @@
 import { Ecs } from "../ecs";
 import { Entity } from "../entity";
 import {
-  EventClassTypeArr,
-  EventReaderInstanceTuple,
-  EventWriterInstanceTuple,
-} from "../events";
-import {
   ComponentTypeTuple,
-  EventReaderQuery,
-  EventWriterQuery,
   ResourceQuery,
   ResourceTypeResult,
   ComponentResult,
-  QueryParams,
   ComponentQuery,
   ComponentResults,
-  BaseQueryResults,
+  QueryRunResults,
+  QueryRunParams,
 } from "./types";
 
 export class Query {
@@ -29,24 +22,14 @@ export class Query {
     H extends ComponentTypeTuple,
     W extends ComponentTypeTuple,
     Wo extends ComponentTypeTuple,
-    R extends ComponentTypeTuple,
-    Ew extends EventClassTypeArr,
-    Er extends EventClassTypeArr
-  >(
-    query: Partial<QueryParams<H, W, Wo, R, Ew, Er>>
-  ): BaseQueryResults<H, R, Ew, Er> {
+    R extends ComponentTypeTuple
+  >(query: Partial<QueryRunParams<H, W, Wo, R>>): QueryRunResults<H, R> {
     const resources = this.queryResources(query);
-    const eventWriters = this.queryEventWriters(query);
-    const eventReaders = this.queryEventReaders(query);
     const components = this.queryComponents(query);
 
     return {
       resources,
-      eventWriters,
-      eventReaders,
       components,
-      commands: this.ecs.commands,
-      query: this,
     };
   }
 
@@ -64,26 +47,6 @@ export class Query {
     }
 
     return resources as ResourceTypeResult<R>;
-  }
-
-  public queryEventWriters<Ew extends EventClassTypeArr>(
-    query: Partial<EventWriterQuery<Ew>>
-  ): EventWriterInstanceTuple<Ew> {
-    if (!query.eventWriter || query.eventWriter.length === 0) {
-      return [];
-    }
-
-    return query.eventWriter(this.ecs);
-  }
-
-  public queryEventReaders<Er extends EventClassTypeArr>(
-    query: Partial<EventReaderQuery<Er>>
-  ): EventReaderInstanceTuple<Er> {
-    if (!query.eventReader || query.eventReader.length === 0) {
-      return [];
-    }
-
-    return query.eventReader(this.ecs);
   }
 
   public queryComponents<

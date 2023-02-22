@@ -5,6 +5,6 @@ export * from "./entity";
 export * from "./input";
 export * from "./time";
 export * from "./timer";
-export * from "./events";
+export * from "./event";
 export * from "./plugin";
 export * from "./builtin";

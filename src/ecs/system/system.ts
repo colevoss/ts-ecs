@@ -1,15 +1,15 @@
 import { Ecs } from "../ecs";
-import { EventClassTypeArr } from "../events";
+import { EventClassTypeArr } from "../event";
 import {
   ComponentQuery,
   ComponentTypeTuple,
+  EventReaderQueryResults,
+  EventWriterQueryResults,
   PartialQueryParams,
   ResourceQuery,
 } from "../query";
 import {
-  EagerSystemHandler,
-  LazySystemQuery,
-  LazySystemHandler,
+  SystemHandler,
   SystemRunnable,
   EntitySystemQuery,
   EntitySystemHandler,
@@ -28,14 +28,6 @@ function newSystemLabel() {
   return systemLabel;
 }
 
-type AbstractClass = {
-  new (...args: any[]): any;
-};
-
-type Class<C extends AbstractClass> = {
-  new (...args: ConstructorParameters<C>): InstanceType<C>;
-};
-
 export abstract class ISystem implements SystemRunnable {
   private systemLabel: SystemLabel;
 
@@ -52,10 +44,12 @@ export abstract class ISystem implements SystemRunnable {
     return this;
   }
 
+  public abstract registerInWorld(ecs: Ecs): void;
+
   public abstract run(ecs: Ecs): void;
 }
 
-export class EagerSystem<
+export class System<
   H extends ComponentTypeTuple,
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
@@ -63,21 +57,77 @@ export class EagerSystem<
   Ew extends EventClassTypeArr,
   Er extends EventClassTypeArr
 > extends ISystem {
+  public handler: SystemHandler<H, R, Ew, Er>;
   public query: PartialQueryParams<H, W, Wo, R, Ew, Er>;
-  public handler: EagerSystemHandler<H, R, Ew, Er>;
+
+  private eventWriters: EventWriterQueryResults<Ew>["eventWriters"] = [];
+  private eventReaders: EventReaderQueryResults<Er>["eventReaders"] = [];
 
   constructor(
     query: PartialQueryParams<H, W, Wo, R, Ew, Er>,
-    handler: EagerSystemHandler<H, R, Ew, Er>
+    handler: SystemHandler<H, R, Ew, Er>
   ) {
     super();
     this.query = query;
     this.handler = handler;
   }
 
-  public run(ecs: Ecs) {
+  public run(ecs: Ecs): void {
     const results = ecs.query.run(this.query);
-    return this.handler(results);
+
+    this.handler(
+      Object.assign(results, {
+        commands: ecs.commands,
+        query: ecs.query,
+        eventWriters: this.eventWriters,
+        eventReaders: this.eventReaders,
+      })
+    );
+  }
+
+  public registerInWorld(ecs: Ecs): void {
+    this.getEventWriters(ecs);
+    this.getEventReaders(ecs);
+  }
+
+  private getEventWriters(ecs: Ecs) {
+    if (!this.query.eventWriter) {
+      return;
+    }
+
+    const writers = [];
+    for (const eventType of this.query.eventWriter) {
+      const event = ecs.eventMap.getEventByType(eventType);
+      if (!event) {
+        throw new Error("No event registered");
+      }
+
+      const writer = event.getNewWriter();
+      writers.push(writer);
+    }
+
+    this.eventWriters = writers as EventWriterQueryResults<Ew>["eventWriters"];
+  }
+
+  private getEventReaders(ecs: Ecs) {
+    if (!this.query.eventReader) {
+      return;
+    }
+
+    const readers = [];
+
+    for (const eventType of this.query.eventReader) {
+      const event = ecs.eventMap.getEventByType(eventType);
+
+      if (!event) {
+        throw new Error("No event registered");
+      }
+
+      const reader = event.registerReader();
+      readers.push(reader);
+    }
+
+    this.eventReaders = readers as EventReaderQueryResults<Er>["eventReaders"];
   }
 
   public static init<
@@ -88,55 +138,10 @@ export class EagerSystem<
     Ew extends EventClassTypeArr,
     Er extends EventClassTypeArr
   >(
-    this: Class<typeof EagerSystem>,
     query: PartialQueryParams<H, W, Wo, R, Ew, Er>,
-    handler: EagerSystemHandler<H, R, Ew, Er>
-  ): EagerSystem<H, W, Wo, R, Ew, Er> {
-    return new EagerSystem(query, handler);
-  }
-}
-
-export class LazySystem<
-  R extends ComponentTypeTuple,
-  Ew extends EventClassTypeArr,
-  Er extends EventClassTypeArr
-> extends ISystem {
-  public handler: LazySystemHandler<R, Ew, Er>;
-  public query: Partial<LazySystemQuery<R, Ew, Er>>;
-
-  constructor(
-    query: Partial<LazySystemQuery<R, Ew, Er>>,
-    handler: LazySystemHandler<R, Ew, Er>
-  ) {
-    super();
-    this.query = query;
-    this.handler = handler;
-  }
-
-  public run(ecs: Ecs): void {
-    // const { commands, resources, eventWriters, eventReaders } =
-    //   ecs.newQuery.run(this.query);
-
-    const results = ecs.query.run(this.query);
-
-    this.handler({
-      resources: results.resources,
-      eventWriters: results.eventWriters,
-      eventReaders: results.eventReaders,
-      query: ecs.query,
-      commands: ecs.commands,
-    });
-  }
-
-  public static init<
-    R extends ComponentTypeTuple,
-    Ew extends EventClassTypeArr,
-    Er extends EventClassTypeArr
-  >(
-    query: Partial<LazySystemQuery<R, Ew, Er>>,
-    handler: LazySystemHandler<R, Ew, Er>
-  ): LazySystem<R, Ew, Er> {
-    return new LazySystem(query, handler);
+    handler: SystemHandler<H, R, Ew, Er>
+  ): System<H, W, Wo, R, Ew, Er> {
+    return new System(query, handler);
   }
 }
 
@@ -168,11 +173,17 @@ export class EntitySystem<
 
   public run(ecs: Ecs): void {
     const queryResults = ecs.query.run(this.resQuery);
+    const results = Object.assign(queryResults, {
+      commands: ecs.commands,
+      query: ecs.query,
+    });
 
     ecs.query.componentQuery(this.componentQuery, (components) => {
-      this.handler(components, queryResults);
+      this.handler(components, results);
     });
   }
+
+  public registerInWorld(): void {}
 
   public static init<
     H extends ComponentTypeTuple,
@@ -186,31 +197,3 @@ export class EntitySystem<
     return new EntitySystem(query, handler);
   }
 }
-
-// class Test {}
-// class CompTest {}
-// //
-// LazySystem.init({ res: [Test] }, function ({ resources, query }) {
-//   const [test] = resources;
-//   const { components } = query.run({ has: [CompTest] });
-//
-//   for (const [e, compTest] of components) {
-//   }
-// });
-//
-// EagerSystem.init(
-//   { has: [CompTest], res: [Test] },
-//   function ({ resources, components, commands }) {
-//     const [test] = resources;
-//
-//     for (const [e, compTest] of components) {
-//     }
-//   }
-// );
-//
-// EntitySystem.init(
-//   { has: [CompTest], res: [Test] },
-//   function (components, { resources, commands }) {
-//     const [e, comp] = components;
-//   }
-// );
