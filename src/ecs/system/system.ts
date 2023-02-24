@@ -8,34 +8,8 @@ import {
   PartialQueryParams,
   ResourceQuery,
 } from "../query";
-import { newSystemLabel, SystemLabel } from "./system-label";
-import {
-  SystemHandler,
-  SystemRunnable,
-  EntitySystemQuery,
-  EntitySystemHandler,
-} from "./types";
-
-export abstract class ISystem implements SystemRunnable {
-  private systemLabel: SystemLabel;
-
-  constructor() {
-    this.systemLabel = newSystemLabel();
-  }
-
-  public getLabel(): SystemLabel {
-    return this.systemLabel;
-  }
-
-  public label(label: SystemLabel): this {
-    this.systemLabel = label;
-    return this;
-  }
-
-  public abstract registerInWorld(ecs: Ecs): void;
-
-  public abstract run(ecs: Ecs): void;
-}
+import { SystemHandler, EntitySystemQuery, EntitySystemHandler } from "./types";
+import { SystemGroup } from "./system-base";
 
 export class System<
   H extends ComponentTypeTuple,
@@ -44,7 +18,7 @@ export class System<
   R extends ComponentTypeTuple,
   Ew extends EventClassTypeArr,
   Er extends EventClassTypeArr
-> extends ISystem {
+> extends SystemGroup {
   public handler: SystemHandler<H, R, Ew, Er>;
   public query: PartialQueryParams<H, W, Wo, R, Ew, Er>;
 
@@ -71,11 +45,15 @@ export class System<
         eventReaders: this.eventReaders,
       })
     );
+
+    super.run(ecs);
   }
 
   public registerInWorld(ecs: Ecs): void {
     this.getEventWriters(ecs);
     this.getEventReaders(ecs);
+
+    super.registerInWorld(ecs);
   }
 
   private getEventWriters(ecs: Ecs) {
@@ -138,7 +116,8 @@ export class EntitySystem<
   W extends ComponentTypeTuple,
   Wo extends ComponentTypeTuple,
   R extends ComponentTypeTuple
-> extends ISystem {
+  // > extends ISystem {
+> extends SystemGroup {
   private query: Partial<EntitySystemQuery<H, W, Wo, R>>;
   private handler: EntitySystemHandler<H, R>;
   private resQuery: Partial<ResourceQuery<R>>;
@@ -169,9 +148,13 @@ export class EntitySystem<
     ecs.query.componentQuery(this.componentQuery, (components) => {
       this.handler(components, results);
     });
+
+    super.run(ecs);
   }
 
-  public registerInWorld(): void {}
+  public registerInWorld(ecs: Ecs): void {
+    super.registerInWorld(ecs);
+  }
 
   public static init<
     H extends ComponentTypeTuple,

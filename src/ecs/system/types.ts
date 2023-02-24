@@ -12,7 +12,7 @@ import {
   ResourceQuery,
   ResourceQueryResults,
 } from "../query";
-import { SystemLabel } from "./system";
+import { SystemLabel } from "./system-label";
 
 export type EagerSystemHandler<
   H extends ComponentTypeTuple,

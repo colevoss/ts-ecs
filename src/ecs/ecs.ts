@@ -2,10 +2,9 @@ import { ComponentListMap, Constructor } from "./components";
 import { Entity, EntityAllocator } from "./entity";
 import { ResourceContainer } from "./resource";
 import { Query } from "./query";
-// import { Commands } from "./commands";
 import { Plugin } from "./plugin";
 import { EntityBuilder } from "./entity-builder";
-import { SystemRunnable, SystemRunner } from "./system";
+import { SystemGroup } from "./system";
 import { Event, EventMap, EventSubscriber } from "./event";
 import { Commands } from "./commands";
 
@@ -21,9 +20,9 @@ export class Ecs {
   public commands: Commands;
   public query: Query;
 
-  public systemsRunner: SystemRunner;
-  public lateSystemRunner: SystemRunner;
-  public startupSystemRunner: SystemRunner;
+  public systemsRunner: SystemGroup;
+  public lateSystemRunner: SystemGroup;
+  public startupSystemRunner: SystemGroup;
 
   constructor() {
     this.allocator = new EntityAllocator();
@@ -32,9 +31,10 @@ export class Ecs {
     this.commands = new Commands(this);
 
     this.query = new Query(this);
-    this.startupSystemRunner = new SystemRunner();
-    this.lateSystemRunner = new SystemRunner();
-    this.systemsRunner = new SystemRunner();
+
+    this.startupSystemRunner = new SystemGroup().label("CoreStartup");
+    this.systemsRunner = new SystemGroup().label("CoreUpdate");
+    this.lateSystemRunner = new SystemGroup().label("LateUpdate");
 
     this.eventMap = new EventMap();
   }
@@ -48,17 +48,13 @@ export class Ecs {
     return this;
   }
 
-  public eventSubscriber<M>(
-    eventType: typeof Event<M>
-    // subscriber: EventSubscriberHandler,
-  ): EventSubscriber<M> {
+  public eventSubscriber<M>(eventType: typeof Event<M>): EventSubscriber<M> {
     const event = this.eventMap.getEventByType<M>(eventType);
 
     if (!event) {
       throw new Error("No event type");
     }
 
-    // event.registerSubscriber(subscriber);
     return event.generateSubscriber();
   }
 
@@ -98,20 +94,21 @@ export class Ecs {
     return entityBuilder;
   }
 
-  public addSystem(system: SystemRunnable): this {
+  public addSystem(system: SystemGroup): this {
     system.registerInWorld(this);
-    this.systemsRunner.addSystem(system);
+    this.systemsRunner.add(system);
     return this;
   }
 
-  public addLateSystem(system: SystemRunnable): this {
+  public addLateSystem(system: SystemGroup): this {
     system.registerInWorld(this);
-    this.lateSystemRunner.addSystem(system);
+    this.lateSystemRunner.add(system);
     return this;
   }
 
-  public addStartupSystem(system: SystemRunnable): this {
-    this.startupSystemRunner.addSystem(system);
+  public addStartupSystem(system: SystemGroup): this {
+    system.registerInWorld(this);
+    this.startupSystemRunner.add(system);
     return this;
   }
 
