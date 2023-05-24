@@ -63,7 +63,7 @@ export class Vertex {
     this._id = id || Vertex.getNewId();
   }
 
-  public add(child: Vertex) {
+  public add(child: Vertex): this {
     // If there is an in dependency and its not for this vertex, find the child
     // vertex and add it to that.
     if (
@@ -123,6 +123,7 @@ export class Vertex {
 
     this.addEdge(weight, child);
     this.sortEdges();
+    return this;
   }
 
   public children(): this[] {
@@ -144,6 +145,10 @@ export class Vertex {
   public in(inVertex: Vertex): this {
     this.parentDependency = new In(inVertex);
     return this;
+  }
+
+  public hasIn(): boolean {
+    return this.parentDependency !== undefined;
   }
 
   public rollup(): this[] {

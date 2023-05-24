@@ -1,4 +1,4 @@
-import { Ecs } from "../ecs";
+import { Ecs, innerecs } from "../ecs";
 import { EventClassTypeArr } from "../event";
 import {
   ComponentQuery,
@@ -63,7 +63,7 @@ export class System<
 
     const writers = [];
     for (const eventType of this.query.eventWriter) {
-      const event = ecs.eventMap.getEventByType(eventType);
+      const event = ecs[innerecs].eventMap.getEventByType(eventType);
       if (!event) {
         throw new Error("No event registered");
       }
@@ -83,7 +83,7 @@ export class System<
     const readers = [];
 
     for (const eventType of this.query.eventReader) {
-      const event = ecs.eventMap.getEventByType(eventType);
+      const event = ecs[innerecs].eventMap.getEventByType(eventType);
 
       if (!event) {
         throw new Error("No event registered");

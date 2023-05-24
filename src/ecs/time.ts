@@ -1,3 +1,7 @@
+import { Ecs } from "./ecs";
+import { Plugin } from "./plugin";
+import { System } from "./system";
+
 export class Time {
   private start: number;
   private last: number;
@@ -73,3 +77,28 @@ export class Time {
     return this;
   }
 }
+
+export class TimePlugin implements Plugin {
+  public build(ecs: Ecs): void {
+    const time = new Time();
+    ecs.addResource(time);
+    ecs.addStartupSystem(startTimeSystem);
+    ecs.addSystem(timeTickSystem.in(ecs.Last));
+  }
+}
+
+const startTimeSystem = System.init(
+  { res: [Time] },
+  function startTime({ resources }) {
+    const [time] = resources;
+    time.run();
+  }
+).label("CoreStartTime");
+
+const timeTickSystem = System.init(
+  { res: [Time] },
+  function tickTime({ resources }) {
+    const [time] = resources;
+    time.tick();
+  }
+).label("CoreTimeTick");

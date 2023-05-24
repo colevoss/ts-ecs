@@ -1,4 +1,3 @@
-import { Ecs } from "../ecs";
 import { EventClassTypeArr } from "../event";
 import {
   BaseQueryResults,
@@ -12,7 +11,6 @@ import {
   ResourceQuery,
   ResourceQueryResults,
 } from "../query";
-import { SystemLabel } from "./system-label";
 
 export type EagerSystemHandler<
   H extends ComponentTypeTuple,
@@ -51,9 +49,3 @@ export type EntitySystemHandler<
   components: ComponentResult<H>,
   queryResults: EntitySystemQueryResults<R>
 ) => void;
-
-export interface SystemRunnable {
-  run(ecs: Ecs): void;
-  registerInWorld(ecs: Ecs): void;
-  getLabel(): SystemLabel;
-}

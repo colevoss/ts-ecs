@@ -1,18 +1,19 @@
 type Constructor = new (...args: any[]) => {};
 
 export class ResourceContainer {
+  // TODO: Clean this up. No Function type
   private resourceMap: Map<Function, unknown> = new Map();
 
-  public set<T extends Constructor>(t: InstanceType<T>) {
-    const constructor = t.constructor;
-    this.resourceMap.set(constructor, t);
+  public set<T extends Constructor>(resource: InstanceType<T>) {
+    const constructor = resource.constructor;
+    this.resourceMap.set(constructor, resource);
   }
 
-  public getResource<T extends Constructor>(t: T): InstanceType<T> {
-    const resource = this.resourceMap.get(t);
+  public getResource<T extends Constructor>(resourceType: T): InstanceType<T> {
+    const resource = this.resourceMap.get(resourceType);
 
     if (!resource) {
-      throw new Error(`Resource not available, ${t}`);
+      throw new Error(`Resource not available, ${resourceType}`);
     }
 
     return resource as InstanceType<T>;

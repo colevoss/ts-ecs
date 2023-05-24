@@ -1,5 +1,5 @@
 import { Child, Parent } from "../builtin";
-import { Ecs } from "../ecs";
+import { Ecs, innerecs } from "../ecs";
 import { Entity } from "../entity";
 import { Command, Commands } from "./commands";
 
@@ -8,7 +8,7 @@ export class Insert<T> implements Command {
 
   public execute(ecs: Ecs): void {
     for (const component of this.components) {
-      ecs.insertComponentForEntity(this.entity, component);
+      ecs[innerecs].insertComponentForEntity(this.entity, component);
     }
   }
 }
@@ -18,7 +18,7 @@ export class Remove<T> implements Command {
 
   public execute(ecs: Ecs): void {
     for (const component of this.components) {
-      ecs.remove(this.entity, component);
+      ecs[innerecs].remove(this.entity, component);
     }
   }
 }
@@ -27,7 +27,15 @@ export class Kill implements Command {
   constructor(private entity: Entity) {}
 
   public execute(ecs: Ecs): void {
-    ecs.killEntity(this.entity);
+    ecs[innerecs].killEntity(this.entity);
+  }
+}
+
+export class Unreserve implements Command {
+  constructor(private entity: Entity) {}
+
+  public execute(): void {
+    this.entity.unreserve();
   }
 }
 
@@ -35,7 +43,7 @@ export class Destroy implements Command {
   constructor(private entity: Entity) {}
 
   public execute(ecs: Ecs): void {
-    ecs.destroyEntity(this.entity);
+    ecs[innerecs].destroyEntity(this.entity);
   }
 }
 
@@ -93,7 +101,9 @@ export class EntityCommands {
   }
 
   public getParentEntity(parent: Parent): EntityCommands | undefined {
-    const entity = this.commands.ecs.getEntityById(parent.parentEntityId);
+    const entity = this.commands.ecs[innerecs].getEntityById(
+      parent.parentEntityId
+    );
 
     if (!entity) {
       return;
@@ -106,7 +116,7 @@ export class EntityCommands {
     const entities: EntityCommands[] = [];
 
     child.childIndecies.forEach((entityId) => {
-      const entity = this.commands.ecs.getEntityById(entityId);
+      const entity = this.commands.ecs[innerecs].getEntityById(entityId);
       if (entity) {
         entities.push(new EntityCommands(entity, this.commands));
       }
@@ -125,8 +135,11 @@ export class ChildCommands {
 
     commands.insert(new Parent(this.parent.id()));
 
+    // TODO: Audit this usage of .componentListMap. Can it be hidden in some way?
     const childComponentMap =
-      this.parent.commands.ecs.componentListMap.getOrCreate<Child>(Child);
+      this.parent.commands.ecs[innerecs].componentListMap.getOrCreate<Child>(
+        Child
+      );
 
     if (!childComponentMap) {
       throw Error("No child map wtf");

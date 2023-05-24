@@ -115,7 +115,7 @@ const spawnPlayerSystem = System.init(
     scene.scene.add(player);
     commands.spawn().insert(new ProjectileManager(100));
   }
-);
+).label("spawn_player");
 
 const shootSystem = System.init(
   { res: [FpsScene, Player], eventWriter: [ShootEvent] },
@@ -128,8 +128,13 @@ const shootSystem = System.init(
 
     const [shootEvent] = eventWriters;
 
-    const [, projectileManager] = query.run({ has: [ProjectileManager] })
-      .components[0];
+    const { components } = query.run({ has: [ProjectileManager] });
+
+    if (!components.length) {
+      return;
+    }
+
+    const [, projectileManager] = components[0];
 
     if (!projectileManager.canShoot()) {
       return;
@@ -151,7 +156,7 @@ const shootSystem = System.init(
 
     player.shotsFired += 1;
   }
-);
+).label("shoot");
 
 const spawnProjectileSystem = System.init(
   { has: [Projectile, Fire], res: [Player, FpsScene, Time] },
@@ -342,15 +347,15 @@ export default function main() {
     requestAnimationFrame(renderWorld);
   }
 
-  World.registerEvent(new MyEvent());
-  World.registerEvent(new ShootEvent());
+  World.addEvent(new MyEvent());
+  World.addEvent(new ShootEvent());
 
   World.addStartupSystem(sceneSetupSystem);
   World.addStartupSystem(spawnPlayerSystem);
 
-  World.registerResource(time);
-  World.registerResource(scene);
-  World.registerResource(player);
+  World.addResource(time);
+  World.addResource(scene);
+  World.addResource(player);
 
   World.addSystem(timeSystem);
   World.addSystem(moveSystem);
@@ -359,8 +364,8 @@ export default function main() {
   World.addSystem(shootSystem);
   World.addSystem(moveProjectileSystem);
 
-  World.addLateSystem(spawnProjectileSystem);
-  World.addLateSystem(expireProjectileSystem);
+  World.addSystem(spawnProjectileSystem.in(World.LateUpdate));
+  World.addSystem(expireProjectileSystem.in(World.LateUpdate));
 
   World.addSystem(testEventSystem);
   World.addSystem(testEventReaderSystem);
@@ -373,7 +378,7 @@ export default function main() {
   // World.addSystem(testParentSystem);
   // World.addSystem(testChildSystem);
 
-  World.resisterPlugin(new StatsPlugin());
+  World.addPlugin(new StatsPlugin());
 
   // Should be last
   World.addSystem(renderSystem);

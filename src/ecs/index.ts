@@ -1,5 +1,5 @@
 export * from "./ecs";
-export * from "./components";
+export * from "./component";
 export * from "./system";
 export * from "./entity";
 export * from "./input";
@@ -8,3 +8,4 @@ export * from "./timer";
 export * from "./event";
 export * from "./plugin";
 export * from "./builtin";
+export * from "./stats";

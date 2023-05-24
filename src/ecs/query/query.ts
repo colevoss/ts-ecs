@@ -1,4 +1,4 @@
-import { Ecs } from "../ecs";
+import { Ecs, innerecs } from "../ecs";
 import { Entity } from "../entity";
 import {
   ComponentTypeTuple,
@@ -43,7 +43,7 @@ export class Query {
     }
 
     for (let i = 0; i < query.res.length; i++) {
-      resources.push(this.ecs.resources.getResource(query.res[i]));
+      resources.push(this.ecs[innerecs].resources.getResource(query.res[i]));
     }
 
     return resources as ResourceTypeResult<R>;
@@ -82,7 +82,7 @@ export class Query {
     if (query.without) {
       for (let i = 0; i < query.without.length; i++) {
         const withoutQueryComponent = query.without[i];
-        const list = this.ecs.componentListMap.get<
+        const list = this.ecs[innerecs].componentListMap.get<
           typeof withoutQueryComponent
         >(withoutQueryComponent);
 
@@ -101,7 +101,8 @@ export class Query {
     if (query.with) {
       for (let i = 0; i < query.with.length; i++) {
         const component = query.with[i];
-        const list = this.ecs.componentListMap.get<typeof component>(component);
+        const list =
+          this.ecs[innerecs].componentListMap.get<typeof component>(component);
 
         // Cannot match if the component list does not exist
         // Cannot match if the entity does not have component
@@ -114,7 +115,7 @@ export class Query {
     if (query.has) {
       for (let i = 0; i < query.has.length; i++) {
         const hasComponent = query.has[i];
-        const list = this.ecs.componentListMap.get(hasComponent);
+        const list = this.ecs[innerecs].componentListMap.get(hasComponent);
 
         if (!list) {
           doesMatch = false;
@@ -147,8 +148,8 @@ export class Query {
     query: Partial<ComponentQuery<H, W, Wo>>,
     cb: (components: ComponentResult<H>) => void
   ) {
-    for (let i = 0; i < this.ecs.allocator.entities.length; i++) {
-      const entry = this.ecs.allocator.entities[i];
+    for (let i = 0; i < this.ecs[innerecs].allocator.entities.length; i++) {
+      const entry = this.ecs[innerecs].allocator.entities[i];
 
       if (!entry.isLive) {
         continue;
@@ -161,7 +162,7 @@ export class Query {
       if (query.without) {
         for (let i = 0; i < query.without.length; i++) {
           const withoutQueryComponent = query.without[i];
-          const list = this.ecs.componentListMap.get<
+          const list = this.ecs[innerecs].componentListMap.get<
             typeof withoutQueryComponent
           >(withoutQueryComponent);
 
@@ -181,7 +182,9 @@ export class Query {
         for (let i = 0; i < query.with.length; i++) {
           const component = query.with[i];
           const list =
-            this.ecs.componentListMap.get<typeof component>(component);
+            this.ecs[innerecs].componentListMap.get<typeof component>(
+              component
+            );
 
           if (!list) {
             doesMatch = false;
@@ -200,7 +203,7 @@ export class Query {
       if (query.has) {
         for (let i = 0; i < query.has.length; i++) {
           const hasComponent = query.has[i];
-          const list = this.ecs.componentListMap.get(hasComponent);
+          const list = this.ecs[innerecs].componentListMap.get(hasComponent);
 
           if (!list) {
             doesMatch = false;

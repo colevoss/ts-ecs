@@ -1,4 +1,4 @@
-import { Entity } from "./entity";
+import { Entity } from "../entity";
 
 export type Constructor = new (...args: any[]) => {};
 
@@ -70,6 +70,8 @@ export class ComponentList<T> {
   }
 }
 
+// Idea: This decorator could store the component type in an array and somehow
+// cache the index in that array for faster lookup and compnent storage.
 export function Component(name?: string) {
   return <T extends Constructor>(superClass: T) => {
     const ComponentClass = class extends superClass implements IComponent {

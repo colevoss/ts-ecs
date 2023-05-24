@@ -1,11 +1,12 @@
-import { Ecs, Plugin } from "./ecs";
-import { System } from "./ecs/system";
+import { Ecs } from "./ecs";
+import { Plugin } from "./plugin";
+import { System } from "./system";
 
 export class StatsPlugin implements Plugin {
   public build(ecs: Ecs): void {
     const stats = new Stats();
-    ecs.registerResource(stats);
-    ecs.addSystem(statSystem);
+    ecs.addResource(stats);
+    ecs.addSystem(statSystem.in(ecs.Last));
     stats.startStats();
 
     setInterval(() => {
@@ -79,4 +80,4 @@ export class Stats {
 const statSystem = System.init({ res: [Stats] }, ({ resources }) => {
   const [stats] = resources;
   stats.tick();
-});
+}).label("Stats");

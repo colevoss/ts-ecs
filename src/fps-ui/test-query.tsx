@@ -5,7 +5,7 @@ import { useEventStore, EventStore } from "./store";
 
 class TestStore extends EventStore<number[]> {
   public init(ecs: Ecs): void {
-    ecs.eventSubscriber(ShootEvent).subscribe(() => {
+    ecs.subscriber(ShootEvent).subscribe(() => {
       const { components } = ecs.query.run({ has: [Projectile] });
 
       this.set(() => {
